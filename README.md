@@ -1,209 +1,154 @@
-# Node.js Learning Journey - Day 1: Introduction to Node.js & Environment Setup
+# Node.js Learning Journey - Day 2: Module System & File Operations
 
 ## 🎯 Day's Objectives
+- Understanding Node.js Module System (CommonJS)
+- Working with Core Modules
+- Building a CLI Tool
 
-Learn the fundamentals of Node.js and set up a development environment for our journey ahead.
+## 📚 Node.js Module System (CommonJS)
 
-## 📚 What is Node.js?
+In Node.js, every file is treated as a **module**. You can export functions, variables, or objects from one file and import them into another using `require`.
 
-**Node.js** is an open-source, **JavaScript runtime environment** that allows you to run JavaScript code **outside of a web browser**.
+### Why Modules?
+- **Organization**: Break code into logical units
+- **Reusability**: Write once, use many times
+- **Namespace isolation**: Avoid naming collisions
+- **Maintainability**: Easier to debug and update
 
-- Traditionally, JavaScript was only used in browsers (like Chrome or Firefox) to make web pages interactive.
-- Node.js takes JavaScript and lets it run on a **server** (back-end), meaning you can use JavaScript for both front-end (browser) and back-end (server) development.
+### 1. Module Exports and Require
 
-### Key Features
+#### Example: Math Operations Module
+```javascript
+// math.js
+function add(a, b) {
+    return a + b;
+}
 
-✅ **Built on Chrome's V8 Engine** (the same engine that runs JavaScript in Chrome)
-✅ **Event-driven & Non-blocking I/O** (handles multiple tasks efficiently)
-✅ **Single-threaded but highly scalable** (uses asynchronous programming)
+function subtract(a, b) {
+    return a - b;
+}
 
-### Why Use Node.js?
+function multiply(a, b) {
+    return a * b;
+}
 
-#### A. JavaScript Everywhere
-- Developers can use **one language (JavaScript)** for both front-end and back-end, making development smoother.
-
-#### B. Fast & Scalable
-- Node.js is **asynchronous** (non-blocking), meaning it can handle many requests at once without waiting for one to finish before starting another.
-
-**Example:**
-Imagine a restaurant:
-- **Blocking (Traditional PHP/Java):** One waiter takes an order, waits for the kitchen to cook, and only then takes the next order.
-- **Non-blocking (Node.js):** The waiter takes orders continuously, and the kitchen notifies when food is ready.
-
-### When Should and Should Not You Use Node.js?
-
-✔ **Perfect For:**
-- Real-time apps (Chat apps, live notifications, gaming)
-- APIs & Microservices (Fast, scalable back-end services)
-- Streaming apps (Video/audio processing)
-- Single-page applications (SPAs) (Like React/Angular apps)
-
-❌ **Not Recommended For:**
-- CPU-heavy tasks (like video encoding, complex calculations)
-- Relational database-heavy apps (better handled by Java, C#, or Python with frameworks like Django)
-
-## 🛠 Development Environment Setup
-
-### 1. Install Node.js & npm
-
-Node.js comes with **npm** (Node Package Manager), which helps install libraries.
-
-#### Steps:
-1. **Download Node.js** from the official site:
-   🔗 [https://nodejs.org](https://nodejs.org/)
-   - Choose the **LTS (Long-Term Support)** version for stability.
-2. **Run the installer** (follow default settings).
-3. **Verify Installation:**
-   Open **Terminal (Mac/Linux) or Command Prompt (Windows)** and run:
-   ```bash
-   node --version
-   npm --version
-   ```
-   You should see versions like:
-   ```
-   v23.12.0  (Node.js version)
-   9.5.1     (npm version)
-   ```
-
-### 2. Choose a Code Editor
-
-A good editor improves productivity. Popular choices:
-- **Visual Studio Code (VS Code)** (Recommended) → [Download Here](https://code.visualstudio.com/)
-- **Sublime Text** (Lightweight)
-
-### 3. Initialize a Node.js Project
-
-Every Node.js app should have a **`package.json`** file (stores project details & dependencies).
-
-#### Steps:
-1. **Create a Project Folder**
-   ```bash
-   mkdir my-node-app
-   cd my-node-app
-   ```
-
-2. **Initialize `package.json`**
-   ```bash
-   npm init -y
-   ```
-   - This creates **`package.json`** with default settings.
-
-### 4. Install Essential Packages
-
-Some commonly used packages:
-
-| **Package** | **Purpose** | **Install Command** |
-| --- | --- | --- |
-| **`express`** | Web framework for APIs & servers | **`npm install express`** |
-| **`nodemon`** | Auto-restarts server on changes | **`npm install --save-dev nodemon`** |
-| **`dotenv`** | Manage environment variables | **`npm install dotenv`** |
-
-**Example:** Installing Express
-```bash
-npm install express
+module.exports = {
+    add,
+    subtract,
+    multiply
+};
 ```
-This adds **`express`** to **`package.json`** under **`dependencies`**.
 
-### 5. Set Up a Basic Server
+#### Using the Module
+```javascript
+// index.js
+const { add, subtract, multiply } = require('./math');
 
-Let's create a simple HTTP server.
+console.log('Addition:', add(5, 3));      // Output: 8
+console.log('Subtraction:', subtract(5, 3)); // Output: 2
+console.log('Multiplication:', multiply(5, 3)); // Output: 15
+```
 
-1. **Create `index.js`**
-   ```javascript
-   const http = require('http');
-   
-   const server = http.createServer((req, res) => {
-       // hit the url http://localhost:3000 and see the response
-       res.end('Hello World');
-   });
-   
-   const PORT = process.env.PORT || 3000;
-   
-   server.listen(PORT, () => {
-       console.log(`Server is running on port ${PORT}`);
-   });
-   ```
+### 2. Core Modules
 
-2. **Run the Server**
-   ```bash
-   node index.js
-   ```
-   Visit: [http://localhost:3000](http://localhost:3000/) → You'll see **`"Hello World"`**
+Node.js comes with several built-in modules. Here are some essential ones:
 
-### 6. Use Nodemon for Auto-Reloading
+#### A. File System (`fs`)
+```javascript
+const fs = require('fs');
 
-Manually restarting the server after every change is tedious. **Nodemon** fixes this.
+// Async read
+fs.readFile('note.txt', 'utf8', (err, data) => {
+    if (err) return console.error(err);
+    console.log(data);
+});
 
-1. **Install Nodemon** (if not installed):
-   ```bash
-   npm install --save-dev nodemon
-   ```
+// Sync read
+const data = fs.readFileSync('note.txt', 'utf8');
+console.log(data);
+```
 
-2. **Update `package.json`**
-   ```json
-   "scripts": {
-     "start": "node index.js",
-     "dev": "nodemon index.js"
-   }
-   ```
+#### B. Path (`path`)
+```javascript
+const path = require('path');
 
-3. **Run in Development Mode**
-   ```bash
-   npm run dev
-   ```
-   Now, any change in **`index.js`** will **auto-restart** the server.
+// Join paths safely across operating systems
+const filePath = path.join(__dirname, 'files', 'note.txt');
+console.log(filePath);
 
-### 7. Use Environment Variables (`.env`)
+// Get file extension
+console.log(path.extname('file.txt')); // Output: .txt
+```
 
-Sensitive data (like API keys) should not be hardcoded. Use **`dotenv`**.
+#### C. Operating System (`os`)
+```javascript
+const os = require('os');
 
-1. **Install `dotenv`**
-   ```bash
-   npm install dotenv
-   ```
+console.log('Platform:', os.platform());
+console.log('Home Directory:', os.homedir());
+console.log('Free Memory:', os.freemem() / 1024 / 1024, 'MB');
+```
 
-2. **Create `.env` File**
-   ```
-   PORT=3000
-   API_KEY=your_secret_key_here
-   ```
+## 🛠️ Practical Project: Word Counter CLI
 
-3. **Modify `index.js`**
-   ```javascript
-   require('dotenv').config();
-   const PORT = process.env.PORT || 3000; // Fallback to 3000 if .env missing
-   ```
-   Now, **`PORT`** is securely loaded from **`.env`**.
+Let's build a command-line tool that counts words in a text file.
 
-⚠ **Never commit `.env` to GitHub!** Add it to **`.gitignore`**.
+### Project Structure
+```
+project/
+├── wordcounter.js
+└── sample.txt
+```
 
-### 8. Version Control (Git)
+### Implementation
 
-Always use Git to track changes.
+```javascript
+const fs = require('fs');
+const path = require('path');
 
-1. **Initialize Git**
-   ```bash
-   git init
-   ```
+// Check if file path is provided
+if (process.argv.length < 3) {
+    console.error('Please provide a file path');
+    process.exit(1);
+}
 
-2. **Create `.gitignore`**
-   ```
-   node_modules/
-   .env
-   ```
+// Get file path from command line args
+const filePath = path.join(__dirname, process.argv[2]);
 
-3. **Commit Changes**
-   ```bash
-   git add .
-   git commit -m "Initial Node.js setup"
-   ```
+// Read and process file
+fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+        console.error('Error:', err.message);
+        process.exit(1);
+    }
+
+    const words = data.trim().split(/\s+/);
+    console.log(`Word Count: ${words.length}`);
+});
+```
+
+### How to Run
+```bash
+node wordcounter.js sample.txt
+```
 
 ## 📝 Today's Key Learnings
-- What is Node.js (V8, single-threaded, non-blocking)
-- Use cases of Node.js
-- Install Node.js & npm
-- Use `node`, `npm`, `npx` from the terminal
-- Initialize a project with `npm init`
-- Create a basic HTTP server
-- Work with environment variables
-- Set up development workflow with nodemon
+- Module system in Node.js (CommonJS)
+- Creating and using custom modules
+- Working with core modules (`fs`, `path`, `os`)
+- Building a CLI tool
+- Handling command-line arguments
+- Asynchronous file operations
+
+## 🎯 Practice Exercises
+1. Enhance the word counter to also count:
+   - Characters (excluding spaces)
+   - Lines
+   - Paragraphs
+2. Create a module that provides different text analysis functions
+3. Add error handling for non-existent files
+
+## 📚 Additional Resources
+- [Node.js Documentation - Modules](https://nodejs.org/api/modules.html)
+- [Node.js Documentation - File System](https://nodejs.org/api/fs.html)
+- [Node.js Documentation - Path](https://nodejs.org/api/path.html)
