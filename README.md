@@ -1,154 +1,238 @@
-# Node.js Learning Journey - Day 2: Module System & File Operations
-
-## 🎯 Day's Objectives
-- Understanding Node.js Module System (CommonJS)
-- Working with Core Modules
-- Building a CLI Tool
-
-## 📚 Node.js Module System (CommonJS)
-
-In Node.js, every file is treated as a **module**. You can export functions, variables, or objects from one file and import them into another using `require`.
-
-### Why Modules?
-- **Organization**: Break code into logical units
-- **Reusability**: Write once, use many times
-- **Namespace isolation**: Avoid naming collisions
-- **Maintainability**: Easier to debug and update
-
-### 1. Module Exports and Require
-
-#### Example: Math Operations Module
-```javascript
-// math.js
-function add(a, b) {
-    return a + b;
-}
-
-function subtract(a, b) {
-    return a - b;
-}
-
-function multiply(a, b) {
-    return a * b;
-}
-
-module.exports = {
-    add,
-    subtract,
-    multiply
-};
-```
-
-#### Using the Module
-```javascript
-// index.js
-const { add, subtract, multiply } = require('./math');
-
-console.log('Addition:', add(5, 3));      // Output: 8
-console.log('Subtraction:', subtract(5, 3)); // Output: 2
-console.log('Multiplication:', multiply(5, 3)); // Output: 15
-```
-
-### 2. Core Modules
-
-Node.js comes with several built-in modules. Here are some essential ones:
-
-#### A. File System (`fs`)
-```javascript
-const fs = require('fs');
-
-// Async read
-fs.readFile('note.txt', 'utf8', (err, data) => {
-    if (err) return console.error(err);
-    console.log(data);
-});
-
-// Sync read
-const data = fs.readFileSync('note.txt', 'utf8');
-console.log(data);
-```
-
-#### B. Path (`path`)
-```javascript
-const path = require('path');
-
-// Join paths safely across operating systems
-const filePath = path.join(__dirname, 'files', 'note.txt');
-console.log(filePath);
-
-// Get file extension
-console.log(path.extname('file.txt')); // Output: .txt
-```
-
-#### C. Operating System (`os`)
-```javascript
-const os = require('os');
-
-console.log('Platform:', os.platform());
-console.log('Home Directory:', os.homedir());
-console.log('Free Memory:', os.freemem() / 1024 / 1024, 'MB');
-```
-
-## 🛠️ Practical Project: Word Counter CLI
-
-Let's build a command-line tool that counts words in a text file.
-
-### Project Structure
-```
-project/
-├── wordcounter.js
-└── sample.txt
-```
-
-### Implementation
-
-```javascript
-const fs = require('fs');
-const path = require('path');
-
-// Check if file path is provided
-if (process.argv.length < 3) {
-    console.error('Please provide a file path');
-    process.exit(1);
-}
-
-// Get file path from command line args
-const filePath = path.join(__dirname, process.argv[2]);
-
-// Read and process file
-fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-        console.error('Error:', err.message);
-        process.exit(1);
-    }
-
-    const words = data.trim().split(/\s+/);
-    console.log(`Word Count: ${words.length}`);
-});
-```
-
-### How to Run
-```bash
-node wordcounter.js sample.txt
-```
-
-## 📝 Today's Key Learnings
-- Module system in Node.js (CommonJS)
-- Creating and using custom modules
-- Working with core modules (`fs`, `path`, `os`)
-- Building a CLI tool
-- Handling command-line arguments
-- Asynchronous file operations
-
-## 🎯 Practice Exercises
-1. Enhance the word counter to also count:
-   - Characters (excluding spaces)
-   - Lines
-   - Paragraphs
-2. Create a module that provides different text analysis functions
-3. Add error handling for non-existent files
-
-## 📚 Additional Resources
-- [Node.js Documentation - Modules](https://nodejs.org/api/modules.html)
-- [Node.js Documentation - File System](https://nodejs.org/api/fs.html)
-- [Node.js Documentation - Path](https://nodejs.org/api/path.html)
+- ✅ **Day 3: Asynchronous JavaScript in Node.js**
+    
+    ### 🎯 Objective:
+    
+    - Understand how Node.js handles async operations.
+        
+        At its core, Node.js is single-threaded. This might sound counter-intuitive for a technology that's known for handling many concurrent connections, but the magic lies in how it manages tasks that don't immediately return a result. This is where asynchronous operations come in. Instead of waiting for a long-running task to complete, Node.js offloads it and continues executing other code. Once the long-running task is done, Node.js is notified, and it then processes the result.
+        
+    
+    ### 📚 Topics:
+    
+    - The Event Loop (overview only)
+        
+        Think of the Event Loop as the conductor of an orchestra. Node.js applications are constantly running, and the Event Loop is what allows them to perform non-blocking I/O operations. When Node.js encounters an asynchronous operation (like reading a file), it sends that operation off to the underlying system (e.g., the operating system kernel). While that operation is being processed externally, the Event Loop continues to check if there are other tasks in the "call stack" (where synchronous code is executed) that need to be run.
+        
+        Once an asynchronous operation completes, its callback function (the code that should run after the operation is done) is placed into a "callback queue." The Event Loop continuously checks this queue, and when the call stack is empty, it moves functions from the callback queue to the call stack for execution. This continuous cycle is what keeps Node.js non-blocking.
+        
+        We'll only do an overview today, as the Event Loop is a deep topic, but understand that it's the mechanism that enables Node.js's asynchronous nature.
+        
+    - Callbacks, Promises, async/await
+        
+        **Callbacks:**
+        Historically, callbacks were the go-to method. A callback is simply a function that is passed as an argument to another function and is executed later, typically when an asynchronous operation completes.
+        
+        ```jsx
+        // Example of a callback-based function
+        function readFileCallback(filename, callback) {
+            // Simulating an async file read
+            setTimeout(() => {
+                const data = "Content from " + filename;
+                const error = null; // In a real scenario, this could be an error object
+                callback(error, data);
+            }, 1000);
+        }
+        
+        readFileCallback("myFile.txt", (err, data) => {
+            if (err) {
+                console.error("Error reading file:", err);
+                return;
+            }
+            console.log("File content (callback):", data);
+        });
+        ```
+        
+        While effective, deeply nested callbacks can lead to "callback hell" or "pyramid of doom," making code difficult to read and maintain.
+        
+        **Promises:**
+        Promises were introduced to address the readability issues of deeply nested callbacks. A Promise is an object that represents the eventual completion (or failure) of an asynchronous operation and its resulting value.
+        
+        A Promise can be in one of three states:
+        
+        - **Pending:** Initial state, neither fulfilled nor rejected.
+        - **Fulfilled (Resolved):** Meaning that the operation completed successfully.
+        - **Rejected:** Meaning that the operation failed.
+        
+        ```jsx
+        // Example of a Promise-based function
+        function readFilePromise(filename) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    const data = "Content from " + filename;
+                    const success = Math.random() > 0.3; // Simulate success/failure
+                    if (success) {
+                        resolve(data); // Operation succeeded
+                    } else {
+                        reject(new Error("Failed to read " + filename)); // Operation failed
+                    }
+                }, 1000);
+            });
+        }
+        
+        readFilePromise("anotherFile.txt")
+            .then(data => {
+                console.log("File content (promise):", data);
+            })
+            .catch(err => {
+                console.error("Error reading file (promise):", err.message);
+            });
+        ```
+        
+        Promises make asynchronous code more readable and easier to chain.
+        
+        **async/await:**
+        Introduced in ES2017, `async/await` is syntactic sugar built on top of Promises, making asynchronous code look and behave more like synchronous code. It significantly improves readability and error handling for asynchronous operations.
+        
+        - The `async` keyword is used to define an asynchronous function. An `async` function implicitly returns a Promise.
+        - The `await` keyword can only be used inside an `async` function. It pauses the execution of the `async` function until the Promise it's waiting for settles (either resolves or rejects).
+        
+        ```jsx
+        // Example of async/await
+        async function readAndProcessFile(filename) {
+            try {
+                const data = await readFilePromise(filename); // Wait for the promise to resolve
+                console.log("File content (async/await):", data);
+                // You can do more operations here with the data
+            } catch (error) {
+                console.error("Error reading file (async/await):", error.message);
+            }
+        }
+        
+        readAndProcessFile("yetAnotherFile.txt");
+        ```
+        
+        `async/await` is generally the preferred method for handling asynchronous operations due to its clarity.
+        
+    - Using Promises and async/await with `fs.promises`
+        
+        The `fs` (File System) module in Node.js provides an API for interacting with the file system. Node.js offers a promise-based version of the `fs` module, accessible via require('fs/promises'). This is the recommended way to handle file operations in modern Node.js code because it integrates seamlessly with `async/await`.
+        
+        Let's look at an example.
+        
+        ```jsx
+        const { log } = require('console');
+        const http = require('http');
+        // load the environment variables from the .env file
+        require('dotenv').config();
+        
+        // fs/promises is a newer way to handle file operations
+        const fs = require('fs/promises');
+        // fs is the older way to handle file operations
+        const fsWithoutPromises = require('fs');
+        
+        // file operation using fs/promises
+        async function fileOperation() {
+            const filename = 'data.txt';
+            const data = 'Hello World';
+            const additionalData = 'Additional Data';
+        
+            try {
+                await fs.writeFile(filename, data)
+                console.log(`File ${filename} created successfully`);
+        
+                await fs.appendFile(filename, additionalData);
+                console.log(`Additional data appended to ${filename}`);
+            } catch (error) {
+                console.error(`Error creating file ${filename}:`, error);
+            }
+        }
+        
+        // file operation without promises
+        const fileOperationWithoutPromises = () => {
+            const filename = 'doc.txt';
+            const data = 'hello world';
+            const additionalData = 'Additional Data';
+        
+            try {
+                fsWithoutPromises.writeFile(filename, data, (err) => {
+                    if (err) {
+                        console.error(`Error creating file ${filename}:`, err);
+                        return;
+                    }
+                    console.log(`File ${filename} created successfully`);
+                });
+        
+                fsWithoutPromises.appendFile(filename, additionalData, (err) => {
+                    if (err) {
+                        console.error(`Error appending to file ${filename}:`, err);
+                        return;
+                    }
+                    console.log(`Additional data appended to ${filename}`);
+                });
+            } catch (error) {
+                console.error(`Error creating file ${filename}:`, error);
+            }
+        }
+        
+        // create a server
+        const server = http.createServer((req, res) => {
+            res.end('Hello World');
+        });
+        
+        // call the file operation functions with promises
+        fileOperation();
+        // call the file operation without promises function
+        fileOperationWithoutPromises();
+        
+        const PORT = process.env.PORT || 3000;
+        
+        server.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+        ```
+        
+    
+    ### 💻 Task:
+    
+    - Read and write to a file using async/await
+        
+        ```jsx
+        const http = require('http');
+        // load the environment variables from the .env file
+        require('dotenv').config();
+        
+        // fs/promises is a newer way to handle file operations
+        const fs = require('fs/promises');
+        // fs is the older way to handle file operations
+        const fsWithoutPromises = require('fs');
+        
+        // read file
+        const readFile = async () => {
+            const filename = 'sample.txt';
+            const data = await fs.readFile(filename, 'utf-8')
+            console.log(data);
+        }
+        
+        // read file without promises
+        const readFileWithoutPromises = () => {
+            const filename = 'sample.txt';
+            fsWithoutPromises.readFile(filename, 'utf-8', (err, data) => {
+                if (err) {
+                    console.error(`Error reading file ${filename}:`, err);
+                    return;
+                }
+                console.log(data);
+            })
+        }
+        
+        // create a server
+        const server = http.createServer((req, res) => {
+            res.end('Hello World');
+        });
+        
+        // call the read file function
+        readFile()
+        // call the read file without promises function
+        readFileWithoutPromises()
+        
+        const PORT = process.env.PORT || 3000;
+        
+        server.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+        ```
+        
+    
+    ### 🔁 Assignment:
+    
+    - Write a script that fetches data from a local file and returns only unique lines
