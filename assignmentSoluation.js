@@ -1,24 +1,16 @@
-// assignment: Write a script that fetches data from a local file and returns only unique lines
+const fs = require('fs').promises;
 
-const fs = require('fs/promises');
-
-const filename = 'fruits.txt';
-
-const readFruits = async() => {
+// Read the JSON file and return its contents
+const readFile = async () => {
     try {
-        const data = await fs.readFile(filename, 'utf-8');
-        // split the data into lines
-        const lines = data.split('\n');
-        // remove the empty lines
-        const filteredLines = lines.filter(line => line.trim() !== '');
-        // remove the duplicate lines   
-        const uniqueLines = [...new Set(lines)]
-        console.log(uniqueLines);
+        const data = await fs.readFile('data.json', 'utf-8');
+        return JSON.parse(data);
     } catch (error) {
-        console.error(`Error reading file ${filename}:`, error);
+        console.error('Error reading file:', error);
+        throw error;
     }
 }
 
 module.exports = {
-    readFruits
-}
+    readFile
+}; 

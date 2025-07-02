@@ -1,0 +1,9 @@
+{
+    "name": "Node.js Basics",
+    "lessons": [
+      "HTTP Server",
+      "File System",
+      "Routing"
+    ],
+    "status": "completed"
+  }
