@@ -3,14 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static Page Example</title>
+    <title>Book API Homepage</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        h1 { color: #333; }
-        p { color: #666; }
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .api-endpoints {
+            text-align: left;
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .api-endpoints h2 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        .api-endpoints ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .api-endpoints li {
+            background-color: #ecf0f1;
+            margin-bottom: 10px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        .api-endpoints li strong {
+            color: #2980b9;
+            margin-right: 10px;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+        .api-endpoints li code {
+            background-color: #e0e6ea;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #c0392b;
+            font-size: 0.9em;
+            white-space: nowrap; /* Prevent code from wrapping */
+            overflow-x: auto;   /* Add horizontal scroll if content overflows */
+        }
+        .api-endpoints li span {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .api-endpoints li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .api-endpoints li strong {
+                margin-bottom: 5px;
+            }
+            .api-endpoints li span {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Hello this is a Home page</h1>
+    <div class="container">
+        <h1>📚 Welcome to the Book API!</h1>
+        <p>This is a mini RESTful API built with Express.js, demonstrating fundamental web server concepts.</p>
+        <p>You can use the endpoints below to manage a collection of books.</p>
+
+        <div class="api-endpoints">
+            <h2>Available Endpoints:</h2>
+            <ul>
+                <li>
+                    <strong>GET</strong> <code>/books</code>
+                    <span>Returns a list of all books.</span>
+                </li>
+                <li>
+                    <strong>POST</strong> <code>/books</code>
+                    <span>Adds a new book. Requires JSON body: <code>{"title": "...", "author": "...", "year": ...}</code></span>
+                </li>
+                <li>
+                    <strong>GET</strong> <code>/books/:id</code>
+                    <span>Retrieves a specific book by its ID.</span>
+                </li>
+                <li>
+                    <strong>DELETE</strong> <code>/books/:id</code>
+                    <span>Deletes a specific book by its ID.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2025 Book API Project. Built with Express.js.</p>
+    </footer>
 </body>
 </html>
