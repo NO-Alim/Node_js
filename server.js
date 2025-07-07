@@ -1,125 +1,63 @@
 const express = require('express');
-const fs = require('fs/promises');
-const path = require('path');
-
-const port = process.env.PORT || 3000;
-
 const app = express();
+const port = 3000;
 
-const DATA_FILE = path.join(__dirname, 'data', 'books.json')
-let books = [];
-let nextBookId = 1;
-
-
-// middleware to parse json
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-// Custom middleware: Logger
-app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url}`);
-    next();
+
+// --- Blog Post API Routes ---
+
+//Retrieve a list of all blog posts
+app.get('/posts', (req, res) => {
+    // In a real application, you would fetch posts from a database here.
+    const posts = [
+        { id: 1, title: 'My First Blog Post', content: 'This is the content of my first post.' },
+        { id: 2, title: 'Learning REST APIs', content: 'A guide to understanding REST principles.' }
+    ];
+    res.status(200).json(posts); // 200 OK
 });
 
-async function loadBooks() {
-    try {
-        const data = await fs.readFile(DATA_FILE, 'utf-8')
-        books = JSON.parse(data);
+//Retrieve a specific blog post by its ID
+app.get('/posts/:id', (req, res) => {
+    const postId = parseInt(req.params.id); // Get ID from URL parameter
+    // In a real application, you would fetch the post from a database.
+    const post = { id: postId, title: `Blog Post ${postId}`, content: `Content of post ${postId}` };
 
-        if (books.length > 0) {
-            const maxId = Math.max(...books.map(book => parseInt(book.id) || 0));
-            nextBookId = maxId + 1;
-        } else{
-            nextBookId = 1;
-        }
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            console.warn('books.json not found. Starting with an empty book list.');
-            books = [];
-            nextBookId = 1;
-        } else {
-            console.log(`Error loading books:`, error);
-            
-            books = [];
-            nextBookId = 1;
-        }
-    }
-}
-
-async function saveBooks(prams) {
-    try {
-        await fs.writeFile(DATA_FILE, JSON.stringify(books, null, 2), 'utf-8');
-        console.log('Books saved successfully to books.json');
-    } catch (error) {
-        console.error('Error saving books:', error);
-    }
-}
-
-app.get('/', (req, res) => {
-    res.send('hello world')
-});
-
-// get all boooks 
-app.get('/books', (req, res) => {
-    res.json(books)
-})
-
-// create a new book
-app.post('/books', async ( req, res) => {
-    const { title, author, year } = req.body; 
-    // Basic validation
-    if (!title || !author) {
-        return res.status(400).json({ message: 'Title and Author are required.' });
-    }
-
-    // create a new book
-
-    const newBook = {
-        id: String(nextBookId++),
-        title,
-        author,
-        year: year ? Number(year) : undefined
-    }
-
-    books.push(newBook);
-    await saveBooks();
-
-    res.status(201).json(newBook);
-})
-
-
-// get single book
-app.get('/books/:id', (req, res) => {
-    const bookId = req.params.id;
-
-    const book = books.find(b => b.id === bookId);
-    if (book) {
-        res.json(book);
-    } else{
-        res.status(404).json({message: 'Book not found'});
-    }
-});
-
-//delete book 
-app.delete('/books/:id', async(req, res) => {
-    const bookId = req.params.id;
-    const initialLength = books.length;
-
-    books = books.filter(book => book.id !== bookId);
-
-    if (books.length < initialLength) {
-        await saveBooks(); // Persist the updated book list to file
-        // 204 No Content is standard for successful DELETE with no response body
-        res.status(204).send();
+    if (post.id === postId) { // Simplified check, in real app, check if post exists in DB
+        res.status(200).json(post); // 200 OK
     } else {
-        // If no book was removed, it means the ID was not found
-        res.status(404).json({ message: `Book with ID ${bookId} not found.` });
+        res.status(404).send('Post not found'); // 404 Not Found
     }
-})
+});
 
+//Create a new blog post
+app.post('/posts', (req, res) => {
+    const newPost = req.body; // Data for the new post comes from the request body
+    // In a real application, you would save this newPost to a database.
+    console.log('New post created:', newPost);
+    // Assign a new ID (in a real app, this would be handled by the database)
+    newPost.id = Math.floor(Math.random() * 1000) + 3; // Mock ID generation
+    res.status(201).json({ message: 'Post created successfully', post: newPost }); // 201 Created
+});
 
+// 4. PUT /posts/:id
+// Objective: Fully update an existing blog post
+app.put('/posts/:id', (req, res) => {
+    const postId = parseInt(req.params.id);
+    const updatedPostData = req.body; // New data for the post
+    
+    console.log(`Updating post ${postId} with data:`, updatedPostData);
+    res.status(200).json({ message: `Post ${postId} updated successfully`, updatedData: updatedPostData }); // 200 OK
+});
 
-app.listen(port, async () => {
-    await loadBooks();
-    console.log(`server is running on port ${port}`);
-})
+//Delete a specific blog post
+app.delete('/posts/:id', (req, res) => {
+    const postId = parseInt(req.params.id);
+    console.log(`Deleting post with ID: ${postId}`);
+    // Assume deletion was successful
+    res.status(200).send(`Post ${postId} deleted successfully`); // 200 OK
+    // Or res.status(204).send() for no content response
+});
+
+app.listen(port, () => {
+    console.log(`Blog Post API listening at http://localhost:${port}`);
+});
