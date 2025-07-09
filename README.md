@@ -1,219 +1,309 @@
-- ✅ **Day 10: CRUD with Mongoose Models**
+- ✅ Day 11: MVC Structure & API Folder Organization
     
     ### 🎯 Objective:
     
-    - Perform full CRUD operations on MongoDB using Mongoose.
+    - Learn to organize code into controller, model, route structure.
+        
+        What is MVC?
+        
+        **MVC** stands for: 
+        
+        - **Model** – handles data and business logic (usually connected to a database).
+        - **View** – in backend APIs, this is often replaced with **JSON responses**.
+        - **Controller** – handles user input, works with the model, and returns responses.
+        - **(Routes)** – technically not in MVC, but in Node.js APIs, we use routes to handle incoming requests and call controllers.
     
     ### 📚 Topics:
     
-    - `Model.find()`, `Model.findById()`, `Model.create()`
-        - `Model.find()`, `Model.findById()`, `Model.create()`
-            
-            These methods are used to retrieve documents from your collection.
-            
-            `Model.find()` is used to query for multiple documents that match specific criteria. If you pass an empty object `{}`, it will return all documents in the collection.
-            
-            `Model.findById()` is a shorthand for `Model.findOne({ _id: id })`. It's very commonly used to retrieve a specific document when you know its unique MongoDB `_id`.
-            
-            The `Model.create()` method is used to create one or more new documents in your MongoDB collection. It's a convenient way to insert data based on your model's schema.
-            
-        - `document.save()`, `Model.updateOne()`, `Model.updateMany()`, `Model.deleteOne()`, `Model.deleteMany()`
-            
-            These methods are used to modify or remove documents from your collection.
-            
-            `document.save()` is used to save changes to an existing document that you've retrieved and modified. You must call this on an actual document instance.
-            
-            `Model.updateOne()` updates a single document that matches the filter criteria. It takes two arguments: a filter object and an update object with `$set` or other update operators.
-            
-            `Model.updateMany()` works similarly but updates all documents that match the filter criteria.
-            
-            `Model.deleteOne()` removes a single document that matches the filter criteria. For deleting by ID, you can use `Model.findByIdAndDelete()` as a convenient alternative.
-            
-            `Model.deleteMany()` removes all documents that match the filter criteria. Be careful with this as passing an empty object `{}` will delete all documents in the collection.
-            
-            Example usage:
-            
-            ```jsx
-            // Save changes to an existing document
-            const user = await User.findById(userId);
-            user.name = 'Updated Name';
-            await user.save();
-            
-            // Update operations
-            await User.updateOne({ _id: userId }, { $set: { status: 'active' } });
-            await User.updateMany({ status: 'inactive' }, { $set: { archived: true } });
-            
-            // Delete operations
-            await User.deleteOne({ _id: userId });
-            await User.deleteMany({ status: 'expired' });
-            ```
-            
-    - Validation errors & error handling
+    - Why structure matters in large projects
         
-        Error handling is critical for any robust API. Mongoose provides built-in validation, and when these validations fail, Mongoose throws a `ValidationError`.
+        In small apps, a single `server.js` file might work. But as your app grows:
         
-        **Common Error Types:**
+        - Code becomes messy and hard to debug.
+        - Adding features becomes painful.
+        - You can’t collaborate easily with others.
         
-        - **`ValidationError`**: Occurs when data doesn't conform to your schema definitions (e.g., `required: true` field is missing, a number is outside `min`/`max` range, or a custom validator fails).
-        - **`CastError`**: Occurs when Mongoose tries to cast a value to a different type and fails (e.g., trying to find a document by an `_id` that is not a valid MongoDB ObjectId format).
-        - **Duplicate Key Error (Code 11000)**: If you have a unique index on a field and try to insert a document with an existing value for that field.
+        By separating concerns:
         
-        **How to Handle Them:**
+        - You **organize** related logic.
+        - It’s easier to **test**.
+        - You improve **code reuse and readability**.
+    - Folder structure:
         
-        Always wrap your Mongoose operations in `try...catch` blocks. Inside the `catch` block, you can inspect the `error` object.
+        ```
+        project-root/
+        │
+        ├── models/            # Mongoose or schema logic
+        │   └── book.model.js
+        │
+        ├── controllers/       # Request logic
+        │   └── book.controller.js
+        │
+        ├── routes/            # API endpoints
+        │   └── book.routes.js
+        │
+        ├── config/            # Database config, ENV, etc.
+        │   └── db.js
+        │
+        ├── app.js             # Main app entry point
+        └── server.js          # Start the server
+        ```
+        
+    - Separate logic for route and controller
+        
+        This is the core concept of MVC in an API context:
+        
+        - **Route (`routes/book.routes.js`)**:
+            - Declares the endpoint.
+            - Says "When a POST request comes to `/api/books`, call `bookController.createBook`."
+            - It's like the signpost on a highway.
+        - **Controller (`controllers/book.controller.js`)**:
+            - Contains the actual function that handles the request.
+            - It receives the `req` and `res` objects.
+            - It extracts data from `req`.
+            - It interacts with `book.model.js` (e.g., `Book.create()`, `Book.findById()`).
+            - It sends back the final `res`.
+            - It's like the traffic controller at the intersection.
+    - Exporting & importing files
+        
+        For this structure to work, you need to use Node.js's module system (`module.exports` and `require()`).
+        
+        **1. Models (`models/book.model.js`):**
+        * You define your schema and model.
+        * You export the Mongoose model so controllers can use it.
         
         ```jsx
-        // General Error Handling Pattern
-        try {
-            // Mongoose operation
-        } catch (error) {
-            if (error.name === 'ValidationError') {
-                // Handle Mongoose Validation Errors
-                const errors = {};
-                for (let field in error.errors) {
-                    errors[field] = error.errors[field].message;
+        // models/book.model.js
+        const mongoose = require('mongoose');
+        
+        const bookSchema = new mongoose.Schema({
+            title: { type: String, required: true, trim: true },
+            author: { type: String, required: true, trim: true },
+            publishedYear: { type: Number, min: 1000, max: new Date().getFullYear() }
+        }, { timestamps: true });
+        
+        const Book = mongoose.model('Book', bookSchema);
+        
+        module.exports = Book; // Export the Book model
+        ```
+        
+        **2. Controllers (`controllers/book.controller.js`):**
+        * You import the necessary model(s).
+        * You define functions for each CRUD operation.
+        * You export an object containing these functions.
+        
+        ```jsx
+        // controllers/book.controller.js
+        const Book = require('../models/book.model'); // Import the Book model
+        
+        // Async function to create a new book
+        exports.createBook = async (req, res) => {
+            try {
+                const newBook = await Book.create(req.body);
+                res.status(201).json(newBook);
+            } catch (error) {
+                if (error.name === 'ValidationError') {
+                    const errors = {};
+                    for (let field in error.errors) {
+                        errors[field] = error.errors[field].message;
+                    }
+                    return res.status(400).json({ message: 'Validation Error', errors });
                 }
-                return res.status(400).json({ message: 'Validation Error', errors });
-            } else if (error.name === 'CastError') {
-                // Handle invalid ID formats
-                return res.status(400).json({ message: 'Invalid ID format' });
-            } else if (error.code === 11000) {
-                // Handle duplicate key errors (e.g., if you had a unique index on 'title')
-                return res.status(409).json({ message: 'Duplicate entry', field: Object.keys(error.keyValue)[0] });
-            } else {
-                // Handle other unexpected errors
-                console.error('Unhandled error:', error);
-                return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+                res.status(500).json({ message: 'Error creating book', error: error.message });
             }
-        }
+        };
+        
+        // Async function to get all books
+        exports.getAllBooks = async (req, res) => {
+            try {
+                const books = await Book.find({});
+                res.status(200).json(books);
+            } catch (error) {
+                res.status(500).json({ message: 'Error fetching books', error: error.message });
+            }
+        };
+        
+        // ... (Similarly define getBookById, updateBook, deleteBook)
+        
+        // Example for getBookById
+        exports.getBookById = async (req, res) => {
+            try {
+                const book = await Book.findById(req.params.id);
+                if (!book) {
+                    return res.status(404).json({ message: 'Book not found' });
+                }
+                res.status(200).json(book);
+            } catch (error) {
+                if (error.name === 'CastError') {
+                    return res.status(400).json({ message: 'Invalid Book ID format' });
+                }
+                res.status(500).json({ message: 'Error fetching book', error: error.message });
+            }
+        };
+        
+        // Example for updateBook
+        exports.updateBook = async (req, res) => {
+            try {
+                const updatedBook = await Book.findByIdAndUpdate(
+                    req.params.id,
+                    req.body,
+                    { new: true, runValidators: true }
+                );
+                if (!updatedBook) {
+                    return res.status(404).json({ message: 'Book not found' });
+                }
+                res.status(200).json(updatedBook);
+            } catch (error) {
+                if (error.name === 'CastError') {
+                    return res.status(400).json({ message: 'Invalid Book ID format' });
+                }
+                if (error.name === 'ValidationError') {
+                    const errors = {};
+                    for (let field in error.errors) {
+                        errors[field] = error.errors[field].message;
+                    }
+                    return res.status(400).json({ message: 'Validation Error', errors });
+                }
+                res.status(500).json({ message: 'Error updating book', error: error.message });
+            }
+        };
+        
+        // Example for deleteBook
+        exports.deleteBook = async (req, res) => {
+            try {
+                const deletedBook = await Book.findByIdAndDelete(req.params.id);
+                if (!deletedBook) {
+                    return res.status(404).json({ message: 'Book not found' });
+                }
+                res.status(200).json({ message: 'Book deleted successfully', deletedBook });
+            } catch (error) {
+                if (error.name === 'CastError') {
+                    return res.status(400).json({ message: 'Invalid Book ID format' });
+                }
+                res.status(500).json({ message: 'Error deleting book', error: error.message });
+            }
+        };
+        ```
+        *Notice the `exports.` prefix. This is shorthand for `module.exports.createBook = async (req, res) => {...};`*
+        ```
+        
+        **3. Routes (`routes/book.routes.js`):**
+        * You import `express` and the controller functions.
+        * You define your routes using `router.METHOD()`.
+        * You export the configured router.
+        
+        ```jsx
+        // routes/book.routes.js
+        const express = require('express');
+        const router = express.Router();
+        const bookController = require('../controllers/book.controller'); // Import controller functions
+        
+        // Define routes and map them to controller functions
+        router.post('/', bookController.createBook);
+        router.get('/', bookController.getAllBooks);
+        router.get('/:id', bookController.getBookById);
+        router.patch('/:id', bookController.updateBook); // Use patch for partial updates
+        router.delete('/:id', bookController.deleteBook);
+        
+        module.exports = router; // Export the router
+        ```
+        
+        **4. App Entry Point (`app.js`):**
+        * Import necessary modules.
+        * Import your configuration (e.g., database connection).
+        * Import and mount your routers.
+        
+        ```jsx
+        // app.js
+        const express = require('express');
+        const mongoose = require('mongoose');
+        const bookRoutes = require('./routes/book.routes'); // Import the book router
+        const app = express();
+        
+        // Connect to MongoDB
+        dbConnect();
+        
+        // Middleware to parse JSON request bodies
+        app.use(express.json());
+        
+        // Mount the book routes
+        app.use('/api/books', bookRoutes);
+        
+        // Basic route for home
+        app.get('/', (req, res) => {
+            res.send('Welcome to the Book API!');
+        });
+        
+        // Error handling middleware (optional but good practice for global errors)
+        app.use((err, req, res, next) => {
+            console.error(err.stack);
+            res.status(500).send('Something broke!');
+        });
+        
+        module.exports = app;
+        ```
+        
+        1. `server.js` – **Server Entry Point**
+        
+        This file is responsible for:
+        
+        - Connecting to the database (MongoDB, etc.).
+        - Importing the app from `app.js`.
+        - Starting the server with `app.listen(...)`.
+        
+        ```jsx
+        // server.js
+        const app = require('./app');
+        const mongoose = require('mongoose');
+        const dbConnect = require('./config/db'); // Import DB connection function (create this in config/db.js)
+        
+        dbConnect().then(() => {
+            console.log("MongoDB connected");
+            app.listen(3000, () => {
+              console.log("Server running on http://localhost:3000");
+            });
+          })
+          .catch(err => console.error("MongoDB connection error:", err));
+        
+        ```
+        
+        **6. Database Configuration (`config/db.js`):**
+        * This file will contain the logic to connect to your MongoDB database.
+        
+        ```jsx
+        // config/db.js
+        const mongoose = require('mongoose');
+        
+        const connectDB = async () => {
+            try {
+                const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/bookstore_mvc', {
+                    useNewUrlParser: true,
+                    useUnifiedTopology: true,
+                    // These options are deprecated in newer Mongoose versions, but good to know
+                    // useCreateIndex: true,
+                    // useFindAndModify: false
+                });
+                console.log(`MongoDB Connected: ${conn.connection.host}`);
+            } catch (error) {
+                console.error(`Error: ${error.message}`);
+                process.exit(1); // Exit process with failure
+            }
+        };
+        
+        module.exports = connectDB;
         ```
         
     
     ### 💻 Task:
     
-    - Complete full CRUD API for `Book` model
+    - Refactor the Book API using:
+        - `book.model.js`
+        - `book.controller.js`
+        - `book.routes.js`
         
-        server.js
-        
-        ```jsx
-        const express = require('express');
-        const app = express();
-        const port = 3000;
-        
-        const { connect } = require('./services/mongo');
-        const Book = require('./models/Book');
-        
-        app.use(express.json());
-        
-        // get all books
-        app.get('/books', async (req, res) => {
-            try {
-                const books = await Book.find();
-                res.json(books);
-            } catch (error) {
-                res.status(500).json({ error: 'Failed to fetch books', details: error.message });
-            }
-        })
-        
-        // Get a book by id
-        app.get('/books/:id', async (req, res) => {
-            try {
-                const book = await Book.findById(req.params.id);
-                if (!book) {
-                    return res.status(404).json({ error: 'Book not found' });
-                }
-                res.json(book);
-            } catch (error) {
-                res.status(500).json({ error: 'Failed to fetch book', details: error.message });
-            }
-        })
-        
-        // Create a new book
-        app.post('/books', async(req, res) => {
-            try {
-                const book =  req.body;
-            if(!book.title || !book.author || !book.publishedYear) {    
-                return res.status(400).send({error: 'Missing required fields'});
-            }
-            const newBook = new Book(book);
-            await newBook.save();
-            res.status(201).send(newBook);
-            } catch (error) {
-                if (error.name === 'ValidationError') {
-                    return res.status(400).json({ error: 'Validation failed', details: error.message });
-                  }
-                  res.status(500).json({ error: 'Failed to create book', details: error.message });
-                }
-        })
-        
-        // Update a book
-        app.put('/books/:id', async (req, res) => {
-            try {
-                const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
-                if (!book) {
-                    return res.status(404).json({ error: 'Book not found' });
-                }
-                res.json(book);
-            } catch (error) {
-                res.status(500).json({ error: 'Failed to update book', details: error.message });
-            }
-        })
-        
-        // Delete a book
-        app.delete('/books/:id', async (req, res) => {
-            try {
-                const book = await Book.findByIdAndDelete(req.params.id);
-                if (!book) {
-                    return res.status(404).json({ error: 'Book not found' });
-                }
-                res.json({ message: 'Book deleted successfully' });
-            } catch (error) {
-                res.status(500).json({ error: 'Failed to delete book', details: error.message });
-            }
-        })
-        
-        connect().then(() => {
-            app.listen(port, () => {
-                console.log(`Blog Post API listening at http://localhost:${port}`);
-            });
-        }).catch((error) => {
-            console.error('Error connecting to MongoDB:', error);
-        });
-        ```
-        
-        models/Book.js
-        
-        ```jsx
-        // models/Book.js
-        const mongoose = require('mongoose');
-        
-        const bookSchema = new mongoose.Schema({
-            title: {
-                type: String,
-                required: true,
-                trim: true // Removes whitespace from both ends of a string
-            },
-            author: {
-                type: String,
-                required: true,
-                trim: true
-            },
-            
-            publishedYear: {
-                type: Number,
-                min: 1000, // Example of a validator: minimum year
-                max: new Date().getFullYear() // Example of a validator: maximum year is current year
-            }
-        }, {
-            timestamps: true // Adds createdAt and updatedAt timestamps
-        });
-        
-        const Book = mongoose.model('Book', bookSchema);
-        
-        module.exports = Book;
-        ```
+        Task completed in current branch(Day-Eleven)
         
     
     ### 🔁 Assignment:
     
-    - Build a `User` CRUD API with proper error handling
+    - Refactor your `User` CRUD API with the same MVC structure
