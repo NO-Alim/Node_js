@@ -1,190 +1,219 @@
-- ✅ **Day 9: MongoDB Recap & Mongoose Introduction**
+- ✅ **Day 10: CRUD with Mongoose Models**
     
     ### 🎯 Objective:
     
-    - Connect Node.js to MongoDB and understand the role of Mongoose.
+    - Perform full CRUD operations on MongoDB using Mongoose.
     
     ### 📚 Topics:
     
-    - Install & set up MongoDB locally or use MongoDB Atlas (cloud)
-        
-        Before we can connect to MongoDB, we need a MongoDB database to connect to! You have two primary options:
-        
-        - **MongoDB Locally:** This involves downloading and installing MongoDB Community Server on your own machine. It's great for development as you don't need an internet connection.
-            - **How to:** You would typically go to the MongoDB website, download the appropriate version for your OS, and follow their installation instructions. For this class, we won't go through the manual installation steps in detail, but it's good to know it's an option.
-        - **MongoDB Atlas (Cloud):** This is the recommended approach for most modern applications, especially when starting out. MongoDB Atlas is a cloud-hosted MongoDB service that handles all the server management for you. It offers a free tier (M0 cluster) which is perfect for learning and small projects.
-            - **Why recommended?** It simplifies setup, provides high availability, and you don't have to worry about managing the database server yourself.
-            - **How to:**
-                1. Go to the MongoDB Atlas website ([cloud.mongodb.com](https://cloud.mongodb.com/)).
-                2. Sign up for a new account (it's free).
-                3. Create a new "Shared Cluster" (the M0 Free Tier).
-                4. Follow the prompts to configure your cluster. You'll need to set up network access (whitelist your IP address or allow access from anywhere for simplicity during learning, though not recommended for production) and create a database user.
-                5. Once your cluster is provisioned, you'll get a connection string. This is crucial for connecting your Node.js application. It will look something like this (with placeholders for your credentials and cluster details):
-                `mongodb+srv://<username>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority`
-    - Connecting to MongoDB with Mongoose
-        
-        Mongoose is an Object Data Modeling (ODM) library for MongoDB and Node.js. It provides a straightforward, schema-based solution to model your application data. It sits on top of the official MongoDB Node.js driver and makes interacting with MongoDB much easier and more structured.
-        
-        Think of Mongoose as a translator and organizer. MongoDB itself is "schemaless," meaning you can store documents with different structures in the same collection. While flexible, this can lead to inconsistencies. Mongoose brings structure by allowing you to define a **schema**, which is like a blueprint for your documents.
-        
-        To connect using Mongoose, you'll first need to install it in your Node.js project:
-        
-        ```jsx
-        npm install mongoose
-        ```
-        
-        Then, in your Node.js code, you'll use the `mongoose.connect()` method:
-        
-        ```jsx
-        // Import Mongoose
-        const mongoose = require('mongoose');
-        
-        // Your MongoDB Atlas connection string
-        // Remember to replace <username>, <password>, <cluster-url>, and <database-name>
-        const mongoURI = 'mongodb+srv://your_username:your_password@your_cluster_url/your_database_name?retryWrites=true&w=majority';
-        
-        // Connect to MongoDB
-        mongoose.connect(mongoURI)
-          .then(() => console.log('MongoDB connected successfully!'))
-          .catch(err => console.error('MongoDB connection error:', err));
-        ```
-        
-    - Mongoose Schema & Model basics
-        
-        This is where Mongoose truly shines!
-        
-        - **Schema:** A Mongoose schema defines the structure of the documents within a collection. It defines the fields, their data types, default values, validators, and other properties. It's like defining a table structure in a relational database, but for your MongoDB document.
+    - `Model.find()`, `Model.findById()`, `Model.create()`
+        - `Model.find()`, `Model.findById()`, `Model.create()`
+            
+            These methods are used to retrieve documents from your collection.
+            
+            `Model.find()` is used to query for multiple documents that match specific criteria. If you pass an empty object `{}`, it will return all documents in the collection.
+            
+            `Model.findById()` is a shorthand for `Model.findOne({ _id: id })`. It's very commonly used to retrieve a specific document when you know its unique MongoDB `_id`.
+            
+            The `Model.create()` method is used to create one or more new documents in your MongoDB collection. It's a convenient way to insert data based on your model's schema.
+            
+        - `document.save()`, `Model.updateOne()`, `Model.updateMany()`, `Model.deleteOne()`, `Model.deleteMany()`
+            
+            These methods are used to modify or remove documents from your collection.
+            
+            `document.save()` is used to save changes to an existing document that you've retrieved and modified. You must call this on an actual document instance.
+            
+            `Model.updateOne()` updates a single document that matches the filter criteria. It takes two arguments: a filter object and an update object with `$set` or other update operators.
+            
+            `Model.updateMany()` works similarly but updates all documents that match the filter criteria.
+            
+            `Model.deleteOne()` removes a single document that matches the filter criteria. For deleting by ID, you can use `Model.findByIdAndDelete()` as a convenient alternative.
+            
+            `Model.deleteMany()` removes all documents that match the filter criteria. Be careful with this as passing an empty object `{}` will delete all documents in the collection.
+            
+            Example usage:
             
             ```jsx
-            const mongoose = require('mongoose');
+            // Save changes to an existing document
+            const user = await User.findById(userId);
+            user.name = 'Updated Name';
+            await user.save();
             
-            const bookSchema = new mongoose.Schema({
-              title: String,
-              author: String,
-              year: Number,
-              // You can also add more complex configurations
-              // pages: { type: Number, required: true, min: 1 },
-              // publishedDate: { type: Date, default: Date.now }
-            });
+            // Update operations
+            await User.updateOne({ _id: userId }, { $set: { status: 'active' } });
+            await User.updateMany({ status: 'inactive' }, { $set: { archived: true } });
+            
+            // Delete operations
+            await User.deleteOne({ _id: userId });
+            await User.deleteMany({ status: 'expired' });
             ```
             
-        - **Model:** A Mongoose model is a class that represents a collection in MongoDB. It's compiled from a schema and allows you to interact with the database (e.g., query, create, update, delete documents). When you create a model, Mongoose automatically pluralizes the model name to find the corresponding collection in MongoDB (e.g., `Book` model will look for the `books` collection).
-            
-            ```jsx
-            const Book = mongoose.model('Book', bookSchema);
-            // Now 'Book' is your model, ready to interact with the 'books' collection
-            ```
-            
-    - Data types in schema
+    - Validation errors & error handling
         
-        Mongoose supports various schema data types, which are similar to JavaScript primitive types:
+        Error handling is critical for any robust API. Mongoose provides built-in validation, and when these validations fail, Mongoose throws a `ValidationError`.
         
-        - `String`
-        - `Number`
-        - `Boolean`
-        - `Date`
-        - `Buffer` (for storing binary data)
-        - `Mixed` (a flexible type for anything, but generally discouraged for structured data as it loses the benefits of schema)
-        - `ObjectId` (for referencing other documents, used for relationships)
-        - `Array` (for arrays of specific types or mixed types)
-        - `Decimal128` (for high-precision decimal numbers)
-        - `Map` (for key-value pairs)
+        **Common Error Types:**
         
-        You can define them simply as `String`, `Number`, etc., or as objects for more options:
+        - **`ValidationError`**: Occurs when data doesn't conform to your schema definitions (e.g., `required: true` field is missing, a number is outside `min`/`max` range, or a custom validator fails).
+        - **`CastError`**: Occurs when Mongoose tries to cast a value to a different type and fails (e.g., trying to find a document by an `_id` that is not a valid MongoDB ObjectId format).
+        - **Duplicate Key Error (Code 11000)**: If you have a unique index on a field and try to insert a document with an existing value for that field.
+        
+        **How to Handle Them:**
+        
+        Always wrap your Mongoose operations in `try...catch` blocks. Inside the `catch` block, you can inspect the `error` object.
         
         ```jsx
-        const exampleSchema = new mongoose.Schema({
-          name: String, // Simple String type
-          age: { type: Number, min: 0, max: 120 }, // Number with validation options
-          isActive: Boolean,
-          createdAt: { type: Date, default: Date.now }, // Date with a default value
-          tags: [String], // Array of Strings
-          metadata: mongoose.Schema.Types.Mixed // Using Mixed type (use with caution!)
-        });
-        ```
-        
-    
-    - Creating documents using `.create()` and `.save()`
-        
-        Once you have a model, you can create new documents (records) in your MongoDB collection.
-        
-        - **`.create()`:** This is a static method on the model that creates and saves one or more documents in a single step. It's often preferred for its conciseness.
-            
-            ```jsx
-            // Assuming 'Book' model is already defined
-            async function createNewBook() {
-              try {
-                const newBook = await Book.create({
-                  title: 'The Hobbit',
-                  author: 'J.R.R. Tolkien',
-                  year: 1937
-                });
-                console.log('Book created:', newBook);
-              } catch (err) {
-                console.error('Error creating book:', err);
-              }
+        // General Error Handling Pattern
+        try {
+            // Mongoose operation
+        } catch (error) {
+            if (error.name === 'ValidationError') {
+                // Handle Mongoose Validation Errors
+                const errors = {};
+                for (let field in error.errors) {
+                    errors[field] = error.errors[field].message;
+                }
+                return res.status(400).json({ message: 'Validation Error', errors });
+            } else if (error.name === 'CastError') {
+                // Handle invalid ID formats
+                return res.status(400).json({ message: 'Invalid ID format' });
+            } else if (error.code === 11000) {
+                // Handle duplicate key errors (e.g., if you had a unique index on 'title')
+                return res.status(409).json({ message: 'Duplicate entry', field: Object.keys(error.keyValue)[0] });
+            } else {
+                // Handle other unexpected errors
+                console.error('Unhandled error:', error);
+                return res.status(500).json({ message: 'Internal Server Error', error: error.message });
             }
-            
-            createNewBook();
-            ```
-            
-        - **`.save()`:** This is an instance method. You first create an instance of your model, set its properties, and then call `.save()` on that instance. This is useful when you want to perform some operations on the document before saving it or for updating existing documents.
-            
-            ```jsx
-            // Assuming 'Book' model is already defined
-            async function createAndSaveBook() {
-              const anotherBook = new Book({
-                title: 'Pride and Prejudice',
-                author: 'Jane Austen',
-                year: 1813
-              });
-            
-              try {
-                const savedBook = await anotherBook.save();
-                console.log('Another book saved:', savedBook);
-              } catch (err) {
-                console.error('Error saving another book:', err);
-              }
-            }
-            
-            createAndSaveBook();
-            ```
-            
+        }
+        ```
+        
     
     ### 💻 Task:
     
-    - Connect to MongoDB Atlas
+    - Complete full CRUD API for `Book` model
         
-        **Ensure MongoDB Atlas Setup:** Make sure you have a MongoDB Atlas account, a free tier cluster running, and you've noted down your connection string (with your actual username and password).
-        
-        - **Ensure MongoDB Atlas Setup:** Make sure you have a MongoDB Atlas account, a free tier cluster running, and you've noted down your connection string (with your actual username and password).
-        - **Create a Node.js Project:**
-            - Create a new folder for your project (e.g., `mongoose-demo`).
-            - Initialize a new Node.js project: `npm init -y`
-            - Install Mongoose: `npm install mongoose`
-            - Create a connect Service in service/mongo.js
-            - Run this connect function/service into your app.js or index.js any where in root level.
-        
-        Note: I have use Our Existing Project.
-        
-    - Create a Mongoose schema for `Book`:
-        
-        Book.js
+        server.js
         
         ```jsx
-        // Schema Only
+        const express = require('express');
+        const app = express();
+        const port = 3000;
+        
+        const { connect } = require('./services/mongo');
+        const Book = require('./models/Book');
+        
+        app.use(express.json());
+        
+        // get all books
+        app.get('/books', async (req, res) => {
+            try {
+                const books = await Book.find();
+                res.json(books);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to fetch books', details: error.message });
+            }
+        })
+        
+        // Get a book by id
+        app.get('/books/:id', async (req, res) => {
+            try {
+                const book = await Book.findById(req.params.id);
+                if (!book) {
+                    return res.status(404).json({ error: 'Book not found' });
+                }
+                res.json(book);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to fetch book', details: error.message });
+            }
+        })
+        
+        // Create a new book
+        app.post('/books', async(req, res) => {
+            try {
+                const book =  req.body;
+            if(!book.title || !book.author || !book.publishedYear) {    
+                return res.status(400).send({error: 'Missing required fields'});
+            }
+            const newBook = new Book(book);
+            await newBook.save();
+            res.status(201).send(newBook);
+            } catch (error) {
+                if (error.name === 'ValidationError') {
+                    return res.status(400).json({ error: 'Validation failed', details: error.message });
+                  }
+                  res.status(500).json({ error: 'Failed to create book', details: error.message });
+                }
+        })
+        
+        // Update a book
+        app.put('/books/:id', async (req, res) => {
+            try {
+                const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
+                if (!book) {
+                    return res.status(404).json({ error: 'Book not found' });
+                }
+                res.json(book);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to update book', details: error.message });
+            }
+        })
+        
+        // Delete a book
+        app.delete('/books/:id', async (req, res) => {
+            try {
+                const book = await Book.findByIdAndDelete(req.params.id);
+                if (!book) {
+                    return res.status(404).json({ error: 'Book not found' });
+                }
+                res.json({ message: 'Book deleted successfully' });
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to delete book', details: error.message });
+            }
+        })
+        
+        connect().then(() => {
+            app.listen(port, () => {
+                console.log(`Blog Post API listening at http://localhost:${port}`);
+            });
+        }).catch((error) => {
+            console.error('Error connecting to MongoDB:', error);
+        });
+        ```
+        
+        models/Book.js
+        
+        ```jsx
+        // models/Book.js
         const mongoose = require('mongoose');
+        
         const bookSchema = new mongoose.Schema({
-            title: { type: String, required: true },
-            author: { type: String, required: true },
-            year: { type: Number, required: true }
-          });
-          
+            title: {
+                type: String,
+                required: true,
+                trim: true // Removes whitespace from both ends of a string
+            },
+            author: {
+                type: String,
+                required: true,
+                trim: true
+            },
+            
+            publishedYear: {
+                type: Number,
+                min: 1000, // Example of a validator: minimum year
+                max: new Date().getFullYear() // Example of a validator: maximum year is current year
+            }
+        }, {
+            timestamps: true // Adds createdAt and updatedAt timestamps
+        });
+        
+        const Book = mongoose.model('Book', bookSchema);
+        
+        module.exports = Book;
         ```
         
     
     ### 🔁 Assignment:
     
-    - Create a Mongoose model for `User` with validation (e.g., `required` fields)
-    Try Yourself.
-    I have simply solve this in models/User.js
+    - Build a `User` CRUD API with proper error handling
