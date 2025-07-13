@@ -1,309 +1,256 @@
-- ✅ Day 11: MVC Structure & API Folder Organization
+- ✅ **Day 13: Error Handling & API Response Design**
     
     ### 🎯 Objective:
     
-    - Learn to organize code into controller, model, route structure.
-        
-        What is MVC?
-        
-        **MVC** stands for: 
-        
-        - **Model** – handles data and business logic (usually connected to a database).
-        - **View** – in backend APIs, this is often replaced with **JSON responses**.
-        - **Controller** – handles user input, works with the model, and returns responses.
-        - **(Routes)** – technically not in MVC, but in Node.js APIs, we use routes to handle incoming requests and call controllers.
+    - Build reliable APIs with good error messages and proper status codes.
+    
+    ### The Importance of Good Error Handling and API Response Design
+    
+    Imagine a user interacts with your API, and something goes wrong (e.g., they send invalid data, try to access a non-existent resource, or an internal server issue occurs).
+    
+    - **Bad Scenario:** They get a cryptic error message like "Internal Server Error" with a `500` status code, or worse, the server just crashes. They have no idea what went wrong or how to fix it.
+    - **Good Scenario:** They receive a clear error message, a precise HTTP status code, and perhaps details about what invalid data they sent. This empowers them to understand and correct their request.
+    
+    Consistent API responses, whether for success or error, make your API predictable and easier for client-side developers to consume.
     
     ### 📚 Topics:
     
-    - Why structure matters in large projects
+    - Global error handling middleware in Express
         
-        In small apps, a single `server.js` file might work. But as your app grows:
+        Express allows you to define special middleware functions specifically for handling errors. These functions have four arguments: `(err, req, res, next)`. Express knows it's an error handler if it has these four arguments.
         
-        - Code becomes messy and hard to debug.
-        - Adding features becomes painful.
-        - You can’t collaborate easily with others.
+        This middleware is typically placed **at the very end** of your `app.js` file, after all your routes and other middleware. When an error occurs in any of your routes or other middleware (either by calling `next(err)` or by an unhandled `async` error), Express will pass the error to this global handler.
         
-        By separating concerns:
+        **Why use it?**
         
-        - You **organize** related logic.
-        - It’s easier to **test**.
-        - You improve **code reuse and readability**.
-    - Folder structure:
+        - **Centralization:** All error handling logic is in one place, making it easier to manage.
+        - **Catch-all:** Catches errors from various parts of your application, preventing server crashes.
+        - **Consistency:** Ensures all error responses conform to a uniform format.
+    
+    middlewares/errorHandler.js
+    
+    ```jsx
+    const errorHandler = (err, req, res, next) => {
+      console.error(err.stack); // You can log to file in production
+    
+      const statusCode = err.statusCode || 500;
+    
+      res.status(statusCode).json({
+        success: false,
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      });
+    };
+    
+    module.exports = errorHandler;
+    
+    ```
+    
+    app.js
+    
+    📌 This should be placed **after all routes** in `app.js`:
+    
+    ```jsx
+    const errorHandler = require('./middlewares/errorHandler');
+    
+    // After routes
+    app.use(errorHandler);
+    ```
+    
+    - Try/catch + `next(err)`
         
-        ```
-        project-root/
-        │
-        ├── models/            # Mongoose or schema logic
-        │   └── book.model.js
-        │
-        ├── controllers/       # Request logic
-        │   └── book.controller.js
-        │
-        ├── routes/            # API endpoints
-        │   └── book.routes.js
-        │
-        ├── config/            # Database config, ENV, etc.
-        │   └── db.js
-        │
-        ├── app.js             # Main app entry point
-        └── server.js          # Start the server
-        ```
+        In your controller functions (or any asynchronous code), you should continue to use `try/catch` blocks. However, instead of directly sending an error response from within the `catch` block for every single error, you can **pass the error to the `next()` function**.
         
-    - Separate logic for route and controller
+        - `next(err)`: When `next()` is called with an argument, Express assumes it's an error and skips all subsequent non-error-handling middleware and routes, jumping directly to the first error-handling middleware.
         
-        This is the core concept of MVC in an API context:
-        
-        - **Route (`routes/book.routes.js`)**:
-            - Declares the endpoint.
-            - Says "When a POST request comes to `/api/books`, call `bookController.createBook`."
-            - It's like the signpost on a highway.
-        - **Controller (`controllers/book.controller.js`)**:
-            - Contains the actual function that handles the request.
-            - It receives the `req` and `res` objects.
-            - It extracts data from `req`.
-            - It interacts with `book.model.js` (e.g., `Book.create()`, `Book.findById()`).
-            - It sends back the final `res`.
-            - It's like the traffic controller at the intersection.
-    - Exporting & importing files
-        
-        For this structure to work, you need to use Node.js's module system (`module.exports` and `require()`).
-        
-        **1. Models (`models/book.model.js`):**
-        * You define your schema and model.
-        * You export the Mongoose model so controllers can use it.
+        This pattern allows your controller functions to focus on their primary logic and offload the actual error response formatting to the centralized global error handler.
         
         ```jsx
-        // models/book.model.js
-        const mongoose = require('mongoose');
-        
-        const bookSchema = new mongoose.Schema({
-            title: { type: String, required: true, trim: true },
-            author: { type: String, required: true, trim: true },
-            publishedYear: { type: Number, min: 1000, max: new Date().getFullYear() }
-        }, { timestamps: true });
-        
-        const Book = mongoose.model('Book', bookSchema);
-        
-        module.exports = Book; // Export the Book model
+        exports.getBookById = async (req, res, next) => {
+          try {
+            const book = await Book.findById(req.params.id);
+            if (!book) {
+              const error = new Error('Book not found');
+              error.statusCode = 404;
+              return next(error);
+            }
+            res.status(200).json({
+              success: true,
+              data: book,
+            });
+          } catch (err) {
+            next(err); // Forward to global error handler
+          }
+        };
         ```
         
-        **2. Controllers (`controllers/book.controller.js`):**
-        * You import the necessary model(s).
-        * You define functions for each CRUD operation.
-        * You export an object containing these functions.
+    - Handling Mongoose validation errors
+        
+        Mongoose `ValidationError` objects are special. They have an `errors` property, which is an object containing details for each field that failed validation. Your global error handler should specifically check for this type of error to provide detailed feedback.
+        
+        Error Handling Middleware Structure:
         
         ```jsx
-        // controllers/book.controller.js
-        const Book = require('../models/book.model'); // Import the Book model
         
-        // Async function to create a new book
-        exports.createBook = async (req, res) => {
+        // app.js (at the very end, after all app.use() and routes)
+        app.use((err, req, res, next) => {
+            console.error(err.stack); // Log the error stack for debugging
+        
+            let statusCode = err.statusCode || 500;
+            let message = err.message || 'Internal Server Error';
+            let errors = []; // For validation errors
+        
+            // Handle Mongoose Validation Errors
+            if (err.name === 'ValidationError') {
+                statusCode = 400; // Bad Request
+                message = 'Validation Failed';
+                for (let field in err.errors) {
+                    errors.push({
+                        field: field,
+                        message: err.errors[field].message
+                    });
+                }
+            }
+            // Handle Mongoose CastError (e.g., invalid ID format)
+            else if (err.name === 'CastError' && err.kind === 'ObjectId') {
+                statusCode = 400; // Bad Request
+                message = `Invalid ID: ${err.value}`;
+            }
+            // Handle Duplicate Key Error (MongoDB error code 11000)
+            else if (err.code === 11000) {
+                statusCode = 409; // Conflict
+                const field = Object.keys(err.keyValue)[0];
+                message = `Duplicate field value: ${field} '${err.keyValue[field]}' already exists.`;
+            }
+            // Custom errors (e.g., from your controller `new Error('Book not found'); error.statusCode = 404;`)
+            // The statusCode and message would already be set if it's a custom error with those properties
+        
+            res.status(statusCode).json({
+                success: false,
+                message: message,
+                errors: errors.length > 0 ? errors : undefined // Only include if there are specific field errors
+            });
+        });
+        ```
+        
+    - Consistent API response format (`success`, `data`, `message`, `error`)
+        
+        A consistent response format makes your API predictable and easier to consume.
+        
+        **Success Response Format:**
+        
+        JSON
+        
+        ```jsx
+        {
+            "success": true,
+            "message": "Operation completed successfully.",
+            "data": {
+                // The actual resource data (e.g., a book object, an array of books)
+            }
+        }
+        ```
+        
+        **Error Response Format:**
+        
+        JSON
+        
+        ```jsx
+        {
+            "success": false,
+            "message": "A descriptive error message (e.g., 'Validation Failed', 'Book not found').",
+            "errors": [
+                // Optional: An array of detailed errors, especially for validation errors
+                // Example: { "field": "title", "message": "Title is required" }
+            ],
+            // "code": 11000 // Optional: custom error code for specific error types
+        }
+        ```
+        
+        **Implementation in Controllers (Success Responses):**
+        
+        ```jsx
+        // controllers/book.controller.js (createBook success example)
+        exports.createBook = async (req, res, next) => {
             try {
                 const newBook = await Book.create(req.body);
-                res.status(201).json(newBook);
+                res.status(201).json({
+                    success: true,
+                    message: 'Book created successfully',
+                    data: newBook
+                });
             } catch (error) {
-                if (error.name === 'ValidationError') {
-                    const errors = {};
-                    for (let field in error.errors) {
-                        errors[field] = error.errors[field].message;
-                    }
-                    return res.status(400).json({ message: 'Validation Error', errors });
-                }
-                res.status(500).json({ message: 'Error creating book', error: error.message });
+                next(error);
             }
         };
         
-        // Async function to get all books
-        exports.getAllBooks = async (req, res) => {
+        // controllers/book.controller.js (getAllBooks success example)
+        exports.getAllBooks = async (req, res, next) => {
             try {
                 const books = await Book.find({});
-                res.status(200).json(books);
+                res.status(200).json({
+                    success: true,
+                    message: 'Books fetched successfully',
+                    data: books
+                });
             } catch (error) {
-                res.status(500).json({ message: 'Error fetching books', error: error.message });
+                next(error);
             }
         };
+        ```
         
-        // ... (Similarly define getBookById, updateBook, deleteBook)
+    - Custom error classes
         
-        // Example for getBookById
-        exports.getBookById = async (req, res) => {
+        In Node.js every thrown error is just an **instance of `Error`**(or of something that extends it, like TypeError). A **custom error class** is simply **your own subclass o `Error`**that carries *extra* context: an HTTP status code, whether it’s an “operational” error (expected) or a “programmer” error (bug).
+        
+        **Example Custom Error Class (`utils/AppError.js`):**
+        
+        ```jsx
+        // utils/AppError.js
+        class AppError extends Error {
+            constructor(message, statusCode = 500, isOperational = true) {
+                super(message); // Call the parent Error constructor
+                this.statusCode = statusCode;
+                this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+                this.isOperational = isOperational; // Mark as an error we expect and want to send to client
+        
+                Error.captureStackTrace(this, this.constructor); // Capture stack trace, excluding this constructor
+            }
+        }
+        
+        module.exports = AppError;
+        ```
+        
+        Using Custom Error class in Controller
+        
+        ```jsx
+        
+        const AppError = require('../utils/AppError'); 
+        
+        exports.getBookById = async (req, res, next) => {
             try {
                 const book = await Book.findById(req.params.id);
                 if (!book) {
-                    return res.status(404).json({ message: 'Book not found' });
+                    // Throw a custom NotFoundError
+                    return next(new AppError('Book not found', 404));
                 }
-                res.status(200).json(book);
-            } catch (error) {
-                if (error.name === 'CastError') {
-                    return res.status(400).json({ message: 'Invalid Book ID format' });
-                }
-                res.status(500).json({ message: 'Error fetching book', error: error.message });
-            }
-        };
-        
-        // Example for updateBook
-        exports.updateBook = async (req, res) => {
-            try {
-                const updatedBook = await Book.findByIdAndUpdate(
-                    req.params.id,
-                    req.body,
-                    { new: true, runValidators: true }
-                );
-                if (!updatedBook) {
-                    return res.status(404).json({ message: 'Book not found' });
-                }
-                res.status(200).json(updatedBook);
-            } catch (error) {
-                if (error.name === 'CastError') {
-                    return res.status(400).json({ message: 'Invalid Book ID format' });
-                }
-                if (error.name === 'ValidationError') {
-                    const errors = {};
-                    for (let field in error.errors) {
-                        errors[field] = error.errors[field].message;
-                    }
-                    return res.status(400).json({ message: 'Validation Error', errors });
-                }
-                res.status(500).json({ message: 'Error updating book', error: error.message });
-            }
-        };
-        
-        // Example for deleteBook
-        exports.deleteBook = async (req, res) => {
-            try {
-                const deletedBook = await Book.findByIdAndDelete(req.params.id);
-                if (!deletedBook) {
-                    return res.status(404).json({ message: 'Book not found' });
-                }
-                res.status(200).json({ message: 'Book deleted successfully', deletedBook });
-            } catch (error) {
-                if (error.name === 'CastError') {
-                    return res.status(400).json({ message: 'Invalid Book ID format' });
-                }
-                res.status(500).json({ message: 'Error deleting book', error: error.message });
-            }
-        };
-        ```
-        *Notice the `exports.` prefix. This is shorthand for `module.exports.createBook = async (req, res) => {...};`*
-        ```
-        
-        **3. Routes (`routes/book.routes.js`):**
-        * You import `express` and the controller functions.
-        * You define your routes using `router.METHOD()`.
-        * You export the configured router.
-        
-        ```jsx
-        // routes/book.routes.js
-        const express = require('express');
-        const router = express.Router();
-        const bookController = require('../controllers/book.controller'); // Import controller functions
-        
-        // Define routes and map them to controller functions
-        router.post('/', bookController.createBook);
-        router.get('/', bookController.getAllBooks);
-        router.get('/:id', bookController.getBookById);
-        router.patch('/:id', bookController.updateBook); // Use patch for partial updates
-        router.delete('/:id', bookController.deleteBook);
-        
-        module.exports = router; // Export the router
-        ```
-        
-        **4. App Entry Point (`app.js`):**
-        * Import necessary modules.
-        * Import your configuration (e.g., database connection).
-        * Import and mount your routers.
-        
-        ```jsx
-        // app.js
-        const express = require('express');
-        const mongoose = require('mongoose');
-        const bookRoutes = require('./routes/book.routes'); // Import the book router
-        const app = express();
-        
-        // Connect to MongoDB
-        dbConnect();
-        
-        // Middleware to parse JSON request bodies
-        app.use(express.json());
-        
-        // Mount the book routes
-        app.use('/api/books', bookRoutes);
-        
-        // Basic route for home
-        app.get('/', (req, res) => {
-            res.send('Welcome to the Book API!');
-        });
-        
-        // Error handling middleware (optional but good practice for global errors)
-        app.use((err, req, res, next) => {
-            console.error(err.stack);
-            res.status(500).send('Something broke!');
-        });
-        
-        module.exports = app;
-        ```
-        
-        1. `server.js` – **Server Entry Point**
-        
-        This file is responsible for:
-        
-        - Connecting to the database (MongoDB, etc.).
-        - Importing the app from `app.js`.
-        - Starting the server with `app.listen(...)`.
-        
-        ```jsx
-        // server.js
-        const app = require('./app');
-        const mongoose = require('mongoose');
-        const dbConnect = require('./config/db'); // Import DB connection function (create this in config/db.js)
-        
-        dbConnect().then(() => {
-            console.log("MongoDB connected");
-            app.listen(3000, () => {
-              console.log("Server running on http://localhost:3000");
-            });
-          })
-          .catch(err => console.error("MongoDB connection error:", err));
-        
-        ```
-        
-        **6. Database Configuration (`config/db.js`):**
-        * This file will contain the logic to connect to your MongoDB database.
-        
-        ```jsx
-        // config/db.js
-        const mongoose = require('mongoose');
-        
-        const connectDB = async () => {
-            try {
-                const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/bookstore_mvc', {
-                    useNewUrlParser: true,
-                    useUnifiedTopology: true,
-                    // These options are deprecated in newer Mongoose versions, but good to know
-                    // useCreateIndex: true,
-                    // useFindAndModify: false
+                res.status(200).json({
+                    success: true,
+                    message: 'Book fetched successfully',
+                    data: book
                 });
-                console.log(`MongoDB Connected: ${conn.connection.host}`);
             } catch (error) {
-                console.error(`Error: ${error.message}`);
-                process.exit(1); // Exit process with failure
+                next(error); // Mongoose CastError will still be caught here
             }
         };
-        
-        module.exports = connectDB;
         ```
         
     
     ### 💻 Task:
     
-    - Refactor the Book API using:
-        - `book.model.js`
-        - `book.controller.js`
-        - `book.routes.js`
-        
-        Task completed in current branch(Day-Eleven)
-        
+    - Add error handling middleware to your project
+    - Refactor your API to use consistent response format
     
     ### 🔁 Assignment:
     
-    - Refactor your `User` CRUD API with the same MVC structure
+    - Simulate a few error cases (invalid ID, missing fields) and test responses
