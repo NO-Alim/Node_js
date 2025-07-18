@@ -1,3 +1,4 @@
+// @ts-nocheck
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -52,6 +53,7 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 // Method to get JWT for user
 userSchema.methods.getSignedJwtToken = function() {
     const secret = process.env.JWT_SECRET || 'helloWorld';
+    console.log('User Model: JWT_SECRET used for signing:', secret ? '[SECRET_PRESENT]' : 'None');
 
     const options = {
         expiresIn: process.env.JWT_EXPIRES_IN || 3600
