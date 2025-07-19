@@ -29,6 +29,12 @@ const userSchema  =new mongoose.Schema({
         minlength: [6, 'Password must be at least 6 characters long'],
         select: false
     },
+    // --------- New -----------
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -53,14 +59,12 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 // Method to get JWT for user
 userSchema.methods.getSignedJwtToken = function() {
     const secret = process.env.JWT_SECRET || 'helloWorld';
-    console.log('User Model: JWT_SECRET used for signing:', secret ? '[SECRET_PRESENT]' : 'None');
-
     const options = {
         expiresIn: process.env.JWT_EXPIRES_IN || 3600
     };
 
     return jwt.sign(
-        {id: this._id, email: this.email, userName: this.userName},
+        {id: this._id, email: this.email, userName: this.userName, role: this.role},
         secret,
         options
     )
