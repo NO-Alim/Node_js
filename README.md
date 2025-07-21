@@ -1,153 +1,63 @@
-- ✅ **Day 18: Role-Based Authorization**
+- **✅ Day 19: Advanced Querying (Filtering, Sorting, Pagination)**
     
     ### 🎯 Objective:
     
-    Differentiate between admin and normal users and restrict actions.
+    Make your API more powerful and flexible with query options.
     
     ### 📚 Topics:
     
-    - Add `role` field to User model (e.g., `"user"`, `"admin"`)
+    - Filter with query params (`GET /tasks?completed=true`)
         
-        The first step in implementing RBAC is to store the user's role directly in their document in the database.
+        **Concept:** Clients send query parameters in the URL (e.g., `?fieldName=value`). Your API extracts these parameters and uses them to build a `find()` query in Mongoose.
         
-        **Concept:** We'll add a new field named `role` to our `User` schema. This field will typically be a string, with predefined values like `'user'` (for regular users) and `'admin'` (for administrators). You can have more roles like `'editor'`, `'moderator'`, etc., as your application grows.
+        - **Exact Matching:** Simple `key=value` pairs directly map to Mongoose queries (e.g., `?completed=true` becomes `{ completed: true }`).
+        - **Advanced Operators:** For more complex filtering (e.g., greater than, less than), you'll often see patterns like `?price[gte]=100`. We need to convert `[gte]` to Mongoose's `$gte` operator.
+    - Sort by fields (`?sort=dueDate`)
         
-        **Modification to `models/user.model.js`:**
+        **Concept:** Clients specify a field (or multiple fields) to sort the results.
         
-        We'll add the `role` field with a default value of `'user'`. This means any new user registered will automatically be a regular user unless explicitly set otherwise (e.g., manually in the database, or via a separate admin interface).
+        - **Ascending Order:** `?sort=fieldName` (e.g., `?sort=dueDate`)
+        - **Descending Order:** `?sort=-fieldName` (e.g., `?sort=-dueDate`). The hyphen () indicates descending.
+        - **Multiple Fields:** `?sort=field1,-field2` for sorting by `field1` ascending, then `field2` descending. Mongoose `sort()` method accepts a space-separated string (e.g., `'field1 -field2'`).
+    - Pagination (`?page=2&limit=10`)
         
-        ```jsx
-        //user.model.js
-        // @ts-nocheck
-        import mongoose from "mongoose";
-        import bcrypt from "bcrypt";
-        import jwt from "jsonwebtoken";
+        **Concept:** Instead of returning all records at once, pagination divides the results into smaller, manageable chunks (pages).
         
-        const userSchema  =new mongoose.Schema({
-            userName: {
-                type: String,
-                required: [true, 'Please add a username.'],
-                unique: true,
-                trim: true,
-                minlength: [3, 'Username must be at least 3 characters long.']
-            },
-            email: {
-                type: String,
-                required: [true, 'Please add an email'],
-                unique: true,
-                trim: true,
-                lowercase: true, 
-                match: [
-                    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-                    'Please add a valid email'
-                ]
-            },
-            password: {
-                type: String,
-                required: [true, 'Please add a password'],
-                minlength: [6, 'Password must be at least 6 characters long'],
-                select: false
-            },
-            // --------- New -----------
-            role: {
-                type: String,
-                enum: ['user', 'admin'],
-                default: 'user'
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now
-            }
-        });
+        - **`page`**: The requested page number (e.g., `?page=2`).
+        - **`limit`**: The number of records per page (e.g., `?limit=10`).
+        - **`skip` (offset)**: Calculated as `(page - 1) * limit`. This tells Mongoose how many documents to skip before starting the results for the current page.
+        - **Mongoose Methods**: `skip()` and `limit()` are used on the query object.
+        - **Response**: It's good practice to return metadata like `total` records, `page`, and `limit` so the client can build proper pagination controls.
+    - Search with `title[regex]`
         
-        // Mongoose pre-save middleware to hash password before saving
-        userSchema.pre('save', async function (next) {
-            if (!this.isModified('password')) {
-                next();
-            }
-            const salt = await bcrypt.genSalt(10);
-            this.password = await bcrypt.hash(this.password, salt);
-            next();
-        })
+        **Concept:** Allow clients to search for partial matches within string fields using regular expressions.
         
-        // Method to compre entered password with hashed password
-        userSchema.methods.comparePassword = async function (enteredPassword) {
-            return await bcrypt.compare(enteredPassword, this.password);
-        }
-        
-        // Method to get JWT for user
-        userSchema.methods.getSignedJwtToken = function() {
-            const secret = process.env.JWT_SECRET || 'helloWorld';
-            const options = {
-                expiresIn: process.env.JWT_EXPIRES_IN || 3600
-            };
-        
-            return jwt.sign(
-                {id: this._id, email: this.email, userName: this.userName, role: this.role},
-                secret,
-                options
-            )
-        }
-        
-        const User = mongoose.model('User', userSchema);
-        
-        export default User;
-        ```
-        
-        **Important Note:** If you have existing users in your database, they won't automatically have a `role` field. You might need to manually update them in MongoDB (e.g., `db.users.updateMany({}, { $set: { role: 'user' } })`) or create a migration script. For testing, you can register new users or manually set one user's role to 'admin' in your MongoDB client.
-        
-    - Create `authorizeRoles(...roles)` middleware
-        
-        This is the core of our role-based authorization. This middleware will check if the authenticated user's role matches any of the allowed roles for a specific route.
-        
-        **Concept:**
-        
-        - It's a "curried" middleware function, meaning it returns another middleware function. This allows us to pass arguments (the allowed roles) when we use it in our routes.
-        - It relies on `req.user` being populated by the `protect` middleware. Therefore, `authorizeRoles` **must always be used *after* `protect`**.
-        - If the user's role is not in the list of allowed roles, it throws a `403 Forbidden` error.
-    
-    ```jsx
-    //authorizeRoles.js
-    
-    import AppError from "../utils/AppError.js";
-    
-    const authorizeRole = (...roles) => {
-        return (req, res, next) => {
-            if (!req.user || !req.user.role) {
-                return next(new AppError('User role not found in token.', 403));
-            }
-    
-            if (!roles.includes(req.user.role)) {
-                return next(new AppError(
-                    `User with role '${req.user.role}' is not authorized to access this route.`,
-                    403
-                ));
-            }
-            next();
-        }
-    }
-    ```
-    
-    - Check `req.user.role` to allow/disallow route access
-        
-        This is how we apply the `authorizeRoles` middleware in our route definitions.
-        
-        **Concept:** When you define a route, you can chain multiple middleware functions. They execute in order. So, `protect` runs first, populates `req.user`, and then `authorizeRoles` runs, using `req.user.role` to make its decision.
-        
-        ```jsx
-        // app.js
-        app.use('/api/task',protect, authorizeRole('admin'), taskRoute)
-        ```
-        
-        - `protect` ensures the user is logged in and attaches `req.user`.
-        - `authorizeRoles('admin')` then checks if `req.user.role` is `'admin'`.
-        - If both pass, taskRoute is executed.
+        - **Pattern**: Often, you'll see `fieldName[regex]=search_term` (e.g., `?title[regex]=work`).
+        - **Mongoose `$regex`**: This operator is used for pattern matching.
+        - **`$options: 'i'`**: This option makes the search case-insensitive.
     
     ### 💻 Task:
-    
-    - Protect routes like /api/task → only for admin
-    - Test with multiple users having different roles
+
+This project's task management features have been enhanced by incorporating advanced querying capabilities, following the implementation patterns demonstrated in the [task-manager-api](https://github.com/NO-Alim/task-manager-api/tree/feature/advanced-querying) repository. Key functionalities now include:
+
+1.  **Filtering**:
+    *   Tasks can be filtered by their `completed` status (e.g., `GET /tasks?completed=true`).
+    *   Advanced operators (`gte`, `gt`, `lte`, `lt`) are supported for numerical and date fields like `createdAt`, transforming query parameters (e.g., `createdAt[gte]=2023-01-01`) into Mongoose-compatible `$operator` syntax.
+
+2.  **Sorting**:
+    *   Results can be sorted by fields such as `dueDate` or `createdAt`.
+    *   Both ascending (`?sort=fieldName`) and descending (`?sort=-fieldName`) orders are supported, along with multi-field sorting (e.g., `?sort=field1,-field2`).
+
+3.  **Pagination**:
+    *   Task retrieval now includes pagination, allowing clients to specify `page` and `limit` parameters (e.g., `GET /tasks?page=2&limit=10`).
+    *   The API calculates `skip` values to efficiently return paginated results and includes `total` records, `page`, and `limit` in the response metadata.
+
+4.  **Search**:
+    *   A case-insensitive search functionality is implemented for the `title` field using regular expressions (e.g., `GET /tasks?title[regex]=work`), leveraging Mongoose's `$regex` operator with `$options: 'i'`.
+
+These features were integrated using a reusable query handler to manage the complexity of filtering, sorting, pagination, and searching, ensuring a robust and flexible API.
     
     ### 🔁 Assignment:
     
-    - Restrict access to one or more routes based on role
+    - Build a reusable query handler (bonus: use a class or utility function)
+    [task-manager-api](https://github.com/NO-Alim/task-manager-api/tree/feature/advanced-querying-improvements) repository. Key functionalities now include:
