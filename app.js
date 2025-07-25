@@ -7,6 +7,7 @@ import taskRoute from "./routes/task.routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import notFound from "./middleware/not-found.js";
 import sanitizeRequest from "./middleware/sanitizeRequest.js";
+import uploadRoutes from './routes/upload.routes.js'
 
 
 const app = express();
@@ -43,12 +44,17 @@ const limiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+app.use('/uploads', express.static('uploads'));
+
 // apply limit to task route
 app.use('/api/task', limiter);
 
 
 app.use('/api/auth', authRoute);
 app.use('/api/task',taskRoute)
+
+// Image upload route
+app.use('/api/upload', uploadRoutes)
 
 app.use(notFound)
 
