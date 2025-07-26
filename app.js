@@ -8,9 +8,16 @@ import errorHandler from "./middleware/errorHandler.js";
 import notFound from "./middleware/not-found.js";
 import sanitizeRequest from "./middleware/sanitizeRequest.js";
 import uploadRoutes from './routes/upload.routes.js'
+import morgan from "morgan";
 
 
 const app = express();
+if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev')); // 'dev' format for colorful and concise output in development
+    console.log('Middleware: Morgan (dev format) active for HTTP request logging.');
+} else {
+    
+}
 // helmet
 app.use(helmet());
 

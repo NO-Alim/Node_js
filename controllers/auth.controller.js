@@ -4,7 +4,7 @@ import AppError from "../utils/AppError.js";
 
 
 const registerUser = async (req, res, next) => {
-    const {userName, email, password} = req.body;
+    const {userName, email, password} = req.body || {};
 
     try {
         const existingUser = await User.findOne({$or: [{email}, {userName}]});
@@ -40,7 +40,7 @@ const registerUser = async (req, res, next) => {
 }
 
 const loginUser = async (req, res, next) => {
-    const {email, password} = req.body;
+    const {email, password} = req.body || {};
 
     if (!email || !password) {
         return next(new AppError('Please provide an email and password', 400));
