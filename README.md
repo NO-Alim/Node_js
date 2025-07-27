@@ -1,189 +1,285 @@
-- ✅ **Day 22: File Uploads with Multer**
+- ✅ **Day 24: Serving Static Files & Documentation**
     
     ### 🎯 Objective:
     
-    Learn how to upload images or files using the `multer` middleware in Express.
+    Prepare your backend to serve frontend files (if needed) and write good API documentation.
     
     ### 📚 Topics:
     
-    - What is `multipart/form-data`
+    - Serving static frontend from `public` folder
         
-        When you submit a standard HTML form with text inputs, the data is usually sent with the `Content-Type` header set to `application/x-www-form-urlencoded` or `application/json`. However, for file uploads, neither of these is suitable because they don't efficiently handle binary data.
+        Once you have a frontend application (e.g., built with React, Next.js, Vue, Angular), you'll need your Express backend to serve its compiled static assets.
         
-        This is where `multipart/form-data` comes in. It's an encoding type that allows you to send a combination of text fields and binary files within a single request. Each part of the form (each input field, each file) is sent as a separate "part" in the request body, delimited by a unique boundary string. Your server then needs a special parser to correctly read and process these parts – and that's where Multer shines!
-        
-    - Installing and configuring `multer`
-        
-        Multer is a middleware specifically designed to parse `multipart/form-data`.
-        
-        ```jsx
-        npm install multer
-        # or
-        yarn add multer
-        ```
-        
-        **Configuration:**
-        Multer primarily needs to know where to store the files and how to name them. It also allows for validation.
-        
-        - **`storage`**: This is the core configuration.
-            - **`multer.diskStorage()`**: Used to store files on the local disk. It takes two functions:
-                - `destination`: Specifies the folder where files should be saved.
-                - `filename`: Specifies how the file should be named inside the destination folder.
-            - You can also use other storage engines (e.g., for cloud services like AWS S3), but `diskStorage` is standard for local uploads.
-        - **`fileFilter`**: A function that lets you control which files should be uploaded and which should be skipped. You can check `file.mimetype` for type validation.
-        - **`limits`**: An object that specifies limits for the uploaded data. Most commonly used for `fileSize`.
-    - Single vs multiple file upload
-        
-        Multer provides different methods depending on how many files you expect:
-        
-        - **`multer().single('fieldName')`**: For uploading a single file. `fieldName` is the name of the input field in your form (e.g., `<input type="file" name="image">`). The uploaded file info will be available in `req.file`.
-        - **`multer().array('fieldName', maxCount)`**: For uploading multiple files from a single input field. `maxCount` is the maximum number of files allowed. The uploaded files info will be in `req.files` (an array).
-        - **`multer().fields([{ name: 'avatar', maxCount: 1 }, { name: 'gallery', maxCount: 8 }])`**: For uploading multiple files from different input fields. `req.files` will be an object with arrays for each field name (e.g., `req.files.avatar`, `req.files.gallery`).
-        - **`multer().any()`**: Accepts all files that come over the wire. Use with caution as it can be less secure. `req.files` will be an array.
-    - Serving static files
-        
-        Once files are uploaded to your server's local disk, you need a way to make them accessible via HTTP. Express provides the `express.static()` middleware for this. You specify a directory, and Express will serve its contents as static assets.
-        
-        For example, if you upload files to an `uploads` folder, `app.use('/uploads', express.static('uploads'))` will make files like `your_project_root/uploads/image.jpg` accessible at `http://your-api-url/uploads/image.jpg`.
-        
-    - Storing uploads locally or in cloud (basic intro)
-        - **Local Storage (Disk Storage)**: This is what `multer.diskStorage()` facilitates. Files are saved directly onto the server's file system.
-            - **Pros:** Simple to set up, good for development, no external dependencies (beyond Multer).
-            - **Cons:** Not scalable (files are tied to a specific server instance), requires managing disk space, backup, and security manually. Not ideal for production with multiple server instances.
-        - **Cloud Storage:** For production applications, it's highly recommended to store files in cloud storage services like:
-            - **AWS S3 (Amazon Simple Storage Service):** Highly scalable, durable, secure, and cost-effective.
-            - **Cloudinary:** A specialized media management platform that handles storage, optimization, and delivery.
-            - **Google Cloud Storage, Azure Blob Storage:** Other cloud provider equivalents.
-            - **How it works with Multer:** You would use a third-party Multer storage engine (e.g., `multer-s3`, `multer-cloudinary`) instead of `multer.diskStorage()`. This topic is outside the scope of this basic task but is essential for production.
-    
-    ### 💻 Task:
-    
-    - Setup file upload in route: `POST /upload` with an image
-        
-        
-        ```jsx
-        //upload.routes.js
-        import express from "express";
-        import multer from "multer";
-        import AppError from "../utils/AppError.js";
-        
-        const router = express.Router();
-        
-        // configure multer storage
-        const storage = multer.diskStorage({
-            destination: (req, file, cb) => {
-                cb(null, 'uploads/')
-            },
-            filename: (req, file, cb) => {
-                cb(null, `${Date.now()}-${file.originalname}`);
-            }
-        })
-        
-        // configure file filter for image validation
-        const fileFilter = (req, file, cb) => {
-            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        
-            if (allowedMimeTypes.includes(file.mimetype)) {
-                cb(null, true);
-            } else {
-                cb(new AppError('Invalid file type. Only JPEG, PNG, GIF, WEBP are allowed.', 400), false);
-            }
-        }
-        
-        // configure multer limit
-        const upload = multer({
-            storage: storage,
-            fileFilter: fileFilter,
-            limits: {
-                fileSize: 1024 * 1024 * 5
-            }
-        });
-        
-        // single file allowed
-        router.post('/', upload.single('image'), (req, res, next) => {
-            if (!req.file) {
-                return next(new AppError('No File Uploaded', 400));
-            }
-        
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        
-            res.status(200).json({
-                success: true,
-                message: 'File uploaded successfully!',
-                fileName: req.file.filename,
-                filePath: req.file.path, // Full path on the server's disk
-                fileUrl: fileUrl, // URL to access the image
-                fileMimeType: req.file.mimetype,
-                fileSize: req.file.size
+        - **Serving from a `public` folder:** For simple static sites (plain HTML, CSS, JS) or if your frontend build process places everything into a `public` directory within your backend project.
+            
+            ```jsx
+            // In app.js
+            app.use(express.static('public')); // Serves files from the 'public' folder
+            ```
+            
+    - Serving frontend build (from React/Next.js) with Express
+        - **Serving a frontend build (from React/Next.js/Vue):**
+        After running `npm run build` (or similar) in your frontend project, it generates an optimized build output (e.g., a `build/` folder for Create React App, or `.next/static` for Next.js). You can then point Express to serve this.JavaScript
+            
+            **Key Considerations:**
+            
+            - **Path:** The path to your frontend build folder (e.g., `../frontend/build` if your frontend is a sibling directory to your backend).
+            - **Client-side Routing Fallback:** For Single Page Applications (SPAs) like React, if a user directly accesses a route like `/dashboard` (which doesn't exist as a physical file on the server), Express needs to serve the main `index.html` file, and the frontend router will then handle the path. This is crucial.
+            
+            ```jsx
+            // In app.js
+            import path from 'path';
+            import { fileURLToPath } from 'url';
+            
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            
+            // Serve static files from the frontend build directory
+            // Assuming your frontend build output is in '../frontend/build' relative to your backend root
+            app.use(express.static(path.join(__dirname, '../frontend/build')));
+            
+            // For any route not handled by your API, serve the frontend's index.html
+            // This is crucial for client-side routing in SPAs (React Router, Vue Router, etc.)
+            app.get('*', (req, res) => {
+                res.sendFile(path.resolve(__dirname, '../frontend', 'build', 'index.html'));
             });
-        })
+            ```
+            
+            **Important:** This `app.get('*')` should be placed **after all your API routes** so that API calls are handled first.
+            
+    - Writing good API documentation (README or Swagger basic)
         
-        // multiple file allowed
-        router.post('/multiple', upload.array('image', 5), (req, res, next) => {
-            if (!req.files || req.files.length === 0) {
-                // If no files were uploaded
-                return next(new AppError('No files uploaded.', 400));
-            }
+        Good API documentation is essential for:
         
-            const uploadedFilesInfo = req.files.map(file => {
-                const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
-                return {
-                    fileName: file.filename,
-                    filePath: file.path, // Full path on the server's disk
-                    fileUrl: fileUrl, // URL to access the image
-                    fileMimeType: file.mimetype,
-                    fileSize: file.size
-                };
-            });
-        
-            res.status(200).json({
-                success: true,
-                message: `${uploadedFilesInfo.length} files uploaded successfully!`,
-                data: uploadedFilesInfo
-            });
-        })
-        
-        // 5. Handle Multer-specific errors 
-        router.use((err, req, res, next) => {
-            if (err instanceof multer.MulterError) {
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    return next(new AppError('File size too large. Max 5MB allowed.', 400));
-                }
-                // Add more MulterError codes if needed
-                return next(new AppError(`Multer error: ${err.message}`, 400));
-            }
-            next(err); // Pass other errors to the global error handler
-        });
-        
-        export default router;
-        ```
-        
-        ```jsx
-        //app.js
-        import uploadRoutes from './routes/upload.routes.js'
-        // Image upload route
-        app.use('/api/upload', uploadRoutes)
-        ```
-        
-    - Validate file type and size
-        
-        ```jsx
-        const fileFilter = (req, file, cb) => {
-            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        
-            if (allowedMimeTypes.includes(file.mimetype)) {
-                cb(null, true);
-            } else {
-                cb(new AppError('Invalid file type. Only JPEG, PNG, GIF, WEBP are allowed.', 400), false);
-            }
-        }
-        ```
-        
-    - Serve image at `GET /uploads/filename.jpg`
-        
-        app.use('/uploads', express.static('uploads'));
-        
+        - **Usability:** Developers (including your future self) can quickly understand how to interact with your API.
+        - **Maintainability:** Easier to update and extend the API.
+        - **Consistency:** Encourages consistent API design.
+        - **README.md:** For smaller projects or initial documentation, a detailed `README.md` in Markdown format is excellent. It's human-readable, version-controllable, and universally supported.
+        - **Swagger/OpenAPI:** For larger, more complex APIs, OpenAPI (formerly Swagger Specification) is the industry standard. It's a machine-readable specification for REST APIs. Tools like Swagger UI can then generate interactive documentation directly from your OpenAPI specification. While powerful, setting up OpenAPI can be more involved.
     
     ### 🔁 Assignment:
     
-    - Add image upload functionality to `/posts` or `/profile`
+    - Document your secure Task Manager API with route descriptions
+        
+        # Secure Task Manager API
+        
+        This API provides a robust and secure backend for a Task Manager application, allowing users to manage their tasks, authenticate securely, and handle user profiles.
+        
+        ## Table of Contents
+        
+        - [Features](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Technologies Used](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Getting Started](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Prerequisites](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Installation](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Environment Variables](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Running the Application](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [API Endpoints](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Authentication](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Users](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [Tasks](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+            - [File Uploads](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Authentication](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Error Handling](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Security Measures](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        - [Logging and Monitoring](https://www.notion.so/Node-js-2381f3efe2db80e0a79cfb2cc627cb40?pvs=21)
+        
+        ## Features
+        
+        - **User Authentication:** Secure registration, login, logout, password reset, and password updates.
+        - **User Management:** CRUD operations for users (admin-only access for some).
+        - **Task Management:** CRUD operations for tasks, associated with authenticated users.
+        - **File Uploads:** Single and multiple image upload functionality.
+        - **Robust Error Handling:** Consistent error responses for various scenarios (e.g., validation, not found, duplicates).
+        - **Security Middleware:** CORS, Helmet, Rate Limiting, Data Sanitization (NoSQL injection, XSS).
+        - **Centralized Logging:** Detailed API activity and error logging with Winston and Morgan.
+        
+        ## Technologies Used
+        
+        - **Node.js**
+        - **Express.js:** Web framework
+        - **MongoDB:** NoSQL database
+        - **Mongoose:** ODM for MongoDB
+        - **JWT (JSON Web Tokens):** For authentication
+        - **Bcrypt:** For password hashing
+        - **Multer:** For handling `multipart/form-data` (file uploads)
+        - **Cors:** Cross-Origin Resource Sharing
+        - **Helmet:** Sets security-related HTTP headers
+        - **Express-Rate-Limit:** For rate limiting API requests
+        - **Express-Mongo-Sanitize:** Prevents NoSQL query injection
+        - **XSS-Clean:** Prevents Cross-Site Scripting (XSS)
+        - **Morgan:** HTTP request logger middleware
+        - **Winston:** Production-ready logging library
+        - **`AppError` (Custom):** For handling operational errors
+        
+        ## Getting Started
+        
+        ### Prerequisites
+        
+        - Node.js (LTS version recommended)
+        - MongoDB instance (local or cloud like MongoDB Atlas)
+        
+        ### Installation
+        
+        1. **Clone the repository:**
+            
+            ```bash
+            git clone [<https://github.com/your-username/secure-task-manager-api.git>](<https://github.com/your-username/secure-task-manager-api.git>)
+            cd secure-task-manager-api
+            
+            ```
+            
+        2. **Install dependencies:**
+            
+            ```bash
+            npm install
+            # or
+            yarn install
+            
+            ```
+            
+        3. **Create `logs` directory:**
+            
+            ```bash
+            mkdir logs
+            mkdir uploads
+            
+            ```
+            
+        
+        ### Environment Variables
+        
+        Create a `.env` file in the root of your project and add the following environment variables:
+        
+        ```
+        NODE_ENV=development # or production
+        PORT=5000
+        MONGO_URI=mongodb://127.0.0.1:27017/taskmanagerdb # Replace with your MongoDB connection string
+        JWT_SECRET=supersecretjwtkey # Change this to a strong, random string
+        JWT_EXPIRES_IN=90d
+        JWT_COOKIE_EXPIRES_IN=90
+        FRONTEND_URL=http://localhost:3000 # Your frontend URL for CORS
+        EMAIL_USERNAME=your_email@example.com # For password reset emails (e.g., SendGrid, Mailgun)
+        EMAIL_PASSWORD=your_email_password
+        EMAIL_HOST=smtp.example.com
+        EMAIL_PORT=587 # or 465 for SSL
+        ```
+        
+        ### Running the Application
+        
+        ```jsx
+        # For development (with nodemon, if installed)
+        npm run dev
+        
+        # For production
+        npm start
+        ```
+        
+        The API will run on the port specified in your `.env` file (default: 3000).
+        
+        ## API Endpoints
+        
+        All API endpoints are prefixed with `/api`.
+        
+        ### Authentication
+        
+        Base URL: `/api/auth`
+        
+        | Route | Method | Description | Auth Rules | Request Body Example | Success Status | Error Status |
+        | --- | --- | --- | --- | --- | --- | --- |
+        | `/register` | `POST` | Register a new user. | Public | `{ "username": "newUser", "email": "user@example.com", "password": "password123", "passwordConfirm": "password123" }` | `201 Created` | `400 Bad Request`, `409 Conflict` (duplicate email) |
+        | `/login` | `POST` | Log in a user and get JWT token. | Public | `{ "email": "user@example.com", "password": "password123" }` | `200 OK` | `401 Unauthorized` |
+        | `/logout` | `GET` | Log out the current user (clears cookie). | Requires Auth Token | - | `200 OK` | `401 Unauthorized` |
+        | `/me` | `GET` | Get current authenticated user's profile. | Requires Auth Token | - | `200 OK` | `401 Unauthorized`, `404 Not Found` |
+        | `/forgotPassword` | `POST` | Request password reset email. | Public | `{ "email": "user@example.com" }` | `200 OK` | `400 Bad Request`, `404 Not Found` |
+        | `/resetPassword/:token` | `PATCH` | Reset password using reset token. | Public | `{ "password": "newStrongPassword", "passwordConfirm": "newStrongPassword" }` | `200 OK` | `400 Bad Request` (invalid token/passwords) |
+        | `/updatePassword` | `PATCH` | Update authenticated user's password. | Requires Auth Token | `{ "currentPassword": "password123", "newPassword": "newStrongPassword", "newPasswordConfirm": "newStrongPassword" }` | `200 OK` | `401 Unauthorized`, `400 Bad Request` |
+        
+        ### Users
+        
+        Base URL: `/api/users`
+        
+        | Route | Method | Description | Auth Rules | Request Body Example | Success Status | Error Status |
+        | --- | --- | --- | --- | --- | --- | --- |
+        | `/` | `GET` | Get all users. | Admin Only | - | `200 OK` | `401 Unauthorized`, `403 Forbidden` |
+        | `/:id` | `GET` | Get user by ID. | Admin Only (or user themselves if ID matches) | - | `200 OK` | `401`, `403`, `404 Not Found` |
+        | `/:id` | `PATCH` | Update user by ID. | Admin Only (or user themselves if ID matches) | `{ "username": "UpdatedUser" }` | `200 OK` | `401`, `403`, `400 Bad Request`, `404 Not Found` |
+        | `/:id` | `DELETE` | Delete user by ID. | Admin Only (or user themselves if ID matches) | - | `204 No Content` | `401`, `403`, `404 Not Found` |
+        | `/updateMe` | `PATCH` | Update current authenticated user's profile. | Requires Auth Token | `{ "username": "MyNewUsername", "email": "new@example.com" }` | `200 OK` | `401 Unauthorized`, `400 Bad Request` |
+        | `/deleteMe` | `DELETE` | Deactivate current authenticated user's account. | Requires Auth Token | - | `204 No Content` | `401 Unauthorized` |
+        
+        ### Tasks
+        
+        Base URL: `/api/tasks`
+        
+        | Route | Method | Description | Auth Rules | Request Body Example | Success Status | Error Status |
+        | --- | --- | --- | --- | --- | --- | --- |
+        | `/` | `GET` | Get all tasks (can be filtered, sorted, paginated). | Public (or Requires Auth Token if associated with user) | - (Query Params: `?title=hello&sort=-createdAt&page=1&limit=10`) | `200 OK` | `400 Bad Request` |
+        | `/` | `POST` | Create a new task. | Requires Auth Token | `{ "title": "Buy groceries", "description": "Milk, bread, eggs", "dueDate": "2025-08-01", "completed": false }` | `201 Created` | `400 Bad Request`, `401 Unauthorized` |
+        | `/:id` | `GET` | Get a single task by ID. | Public (or Requires Auth Token) | - | `200 OK` | `404 Not Found` |
+        | `/:id` | `PUT` | Update a task by ID. | Requires Auth Token | `{ "title": "Buy milk", "completed": true }` | `200 OK` | `400 Bad Request`, `401 Unauthorized`, `404 Not Found` |
+        | `/:id` | `DELETE` | Delete a task by ID. | Requires Auth Token | - | `204 No Content` | `401 Unauthorized`, `404 Not Found` |
+        
+        ### File Uploads
+        
+        Base URL: `/api/upload`
+        
+        | Route | Method | Description | Auth Rules | Request Body Example | Success Status | Error Status |
+        | --- | --- | --- | --- | --- | --- | --- |
+        | `/` | `POST` | Upload a single image file. | Public | `multipart/form-data` with field `image` | `200 OK` | `400 Bad Request` |
+        | `/multiple` | `POST` | Upload multiple image files. | Public | `multipart/form-data` with field `images` (array) | `200 OK` | `400 Bad Request` |
+        | `/uploads/:filename.jpg` | `GET` | Serve uploaded image file directly. | Public | - | `200 OK` (Image) | `404 Not Found` |
+        
+        ---
+        
+        ## Authentication
+        
+        This API uses **JSON Web Tokens (JWT)** for authentication.
+        
+        1. **Registration/Login:** Upon successful registration or login, the API sends a JWT token back to the client, typically as an HTTP-only cookie.
+        2. **Protection:** Routes marked "Requires Auth Token" expect a valid JWT in the `Authorization` header as a `Bearer` token (e.g., `Authorization: Bearer <your-jwt-token>`).
+        3. **Cookie:** If `JWT_COOKIE_EXPIRES_IN` is set in `.env`, the token is also sent as an HTTP-only cookie, making it secure against XSS attacks.
+        
+        ## Error Handling
+        
+        The API uses a centralized error handling mechanism to provide consistent and informative error responses.
+        
+        - **Operational Errors (4xx):** Expected errors (e.g., invalid input, resource not found, unauthorized access). These return a `4xx` status code and a clear `message` to the client.JSON
+            
+            ```jsx
+            {
+                "success": false,
+                "status": "fail",
+                "message": "Invalid input data: Title is required."
+            }
+            ```
+            
+        - **Programming/Internal Errors (5xx):** Unexpected errors (e.g., database connection issues, server code bugs). In `development` mode, the full error details (including stack trace) are returned for debugging. In `production` mode, a generic "Something went wrong!" message is returned to the client to avoid leaking sensitive information.JSON
+            
+            ```jsx
+            {
+                "success": false,
+                "status": "error",
+                "message": "Something went wrong! Please try again later."
+            }
+            ```
+            
+        
+        ## Security Measures
+        
+        The API is equipped with several security middlewares:
+        
+        - **CORS:** Configured to allow requests from specified origins (`FRONTEND_URL`).
+        - **Helmet:** Sets various HTTP headers (`X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, etc.) to mitigate common web vulnerabilities.
+        - **Express-Rate-Limit:** Limits the number of requests per IP address to prevent brute-force attacks and abuse (e.g., 100 requests per 15 minutes for all `/api/` routes).
+        - **Express-Mongo-Sanitize:** Cleans `req.body`, `req.query`, and `req.params` from `$` and `.` characters to prevent NoSQL query injection.
+        - **XSS-Clean:** Sanitizes user input to prevent Cross-Site Scripting (XSS) attacks.
+        
+        ## Logging and Monitoring
+        
+        - **Morgan:** Used for HTTP request logging. In development, it logs to the console (`dev` format). In production, it can be configured to log to a file.
+        - **Winston:** A robust, production-ready logging library.
+            - Logs application events and errors with different severity levels (`debug`, `info`, `error`).
+            - Logs errors to `logs/error.log` and all combined logs to `logs/combined.log` in JSON format.
+            - Automatically includes timestamps and stack traces for errors.
+            - Captures uncaught exceptions and unhandled promise rejections for critical error monitoring.
