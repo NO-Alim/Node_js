@@ -1,3 +1,15 @@
+## Our Learning Journey
+
+This repository chronicles a 4-week journey into building robust Node.js applications. By the end of this comprehensive program, the goal was for students to be able to:
+
+- Build full-featured REST APIs
+- Handle authentication & authorization securely
+- Use Express.js and its middleware effectively
+- Work confidently with MongoDB from the backend
+- Understand deployment & production setups for Node.js applications
+- Utilize Node.js confidently in full-stack applications
+
+
 # Project Branches
 
 Here are the branches of this project:
@@ -26,3 +38,4 @@ Here are the branches of this project:
 - [✅ Day 23: Logging & Error Monitoring](https://github.com/NO-Alim/Node_js/tree/Day-twenty-three)
 - [✅ Day 24: Serving Static Files & Documentation](https://github.com/NO-Alim/Node_js/tree/Day-twenty-four)
 - [✅ Day 25: Deployment to Render/Railway](https://github.com/NO-Alim/Node_js/tree/Day-twenty-five)
+
