@@ -1,0 +1,28 @@
+# Project Branches
+
+Here are the branches of this project:
+
+- [✅ Day 1: Introduction to Node.js & Environment Setup](https://github.com/NO-Alim/Node_js/tree/Day-one)
+- [✅ Day 2: Node.js Module System (CommonJS)](https://github.com/NO-Alim/Node_js/tree/Day-two)
+- [✅ Day 3: Asynchronous JavaScript in Node.js](https://github.com/NO-Alim/Node_js/tree/Day-three)
+- [✅ Day 4: Basic HTTP Server with Node.js](https://github.com/NO-Alim/Node_js/tree/Day-Four)
+- [✅ Day 5: Intro to Express.js](https://github.com/NO-Alim/Node_js/tree/Day-Five)
+- [✅ Day 6: Express Middleware & Static Files](https://github.com/NO-Alim/Node_js/tree/Day-Six)
+- [✅ Day 7: Project – Mini REST API + Recap](https://github.com/NO-Alim/Node_js/tree/Day-Seven)
+- [✅ Day 8: REST API Fundamentals](https://github.com/NO-Alim/Node_js/tree/Day-Eight)
+- [✅ Day 9: MongoDB Recap & Mongoose Introduction](https://github.com/NO-Alim/Node_js/tree/Day-Nine)
+- [✅ Day 10: CRUD with Mongoose Models](https://github.com/NO-Alim/Node_js/tree/Day-Ten)
+- [✅ Day 11: MVC Structure & API Folder Organization](https://github.com/NO-Alim/Node_js/tree/Day-Eleven)
+- [✅ Day 13: Error Handling & API Response Design](https://github.com/NO-Alim/Node_js/tree/Day-Thirteen)
+- [✅ Day 14: Practice Day + Mini Project](https://github.com/NO-Alim/Node_js/tree/Day-Forteen)
+- [✅ Day 15: Intro to Authentication (JWT & bcrypt)](https://github.com/NO-Alim/Node_js/tree/Day-Fifteen)
+- [✅ Day 16: Register & Login with MongoDB](https://github.com/NO-Alim/Node_js/tree/Day-Sixteen)
+- [✅ Day 17: Protecting Routes with Middleware](https://github.com/NO-Alim/Node_js/tree/Day-Seventeen)
+- [✅ Day 18: Role-Based Authorization](https://github.com/NO-Alim/Node_js/tree/Day-Eighteen)
+- [✅ Day 19: Advanced Querying (Filtering, Sorting, Pagination)](https://github.com/NO-Alim/Node_js/tree/Day-Nineteen)
+- [✅ Day 20: CORS, Helmet, and Security Middleware](https://github.com/NO-Alim/Node_js/tree/Day-twenty)
+- [✅ Day 21: Recap & Build Authentication + Task Manager Project](https://github.com/NO-Alim/Node_js/tree/Day-Twenty-one)
+- [✅ Day 22: File Uploads with Multer](https://github.com/NO-Alim/Node_js/tree/Day-twenty-two)
+- [✅ Day 23: Logging & Error Monitoring](https://github.com/NO-Alim/Node_js/tree/Day-twenty-three)
+- [✅ Day 24: Serving Static Files & Documentation](https://github.com/NO-Alim/Node_js/tree/Day-twenty-four)
+- [✅ Day 25: Deployment to Render/Railway](https://github.com/NO-Alim/Node_js/tree/Day-twenty-five)
